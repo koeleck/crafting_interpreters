@@ -8,7 +8,7 @@ class CraftingInterpretersConan(ConanFile):
     generators = "cmake_paths", "cmake_find_package"
 
     def requirements(self):
-        self.requires("catch2/2.13.8")
+        self.requires("doctest/2.4.8")
         self.requires("fmt/8.1.1")
 
     def source(self):

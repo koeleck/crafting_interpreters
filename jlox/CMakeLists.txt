@@ -5,6 +5,9 @@ add_executable(jlox
 
     log.hpp
     log.cpp
+
+    tokens.hpp
+    tokens.cpp
 )
 
 target_link_libraries(jlox

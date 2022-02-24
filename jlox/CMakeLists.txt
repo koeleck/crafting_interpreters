@@ -9,6 +9,8 @@ target_sources(jlox_sources INTERFACE
     tokens.cpp
     scanner.hpp
     scanner.cpp
+    utf-8.hpp
+    utf-8.cpp
 )
 target_link_libraries(jlox_sources
     INTERFACE

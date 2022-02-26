@@ -11,6 +11,8 @@ target_sources(jlox_sources INTERFACE
     scanner.cpp
     utf-8.hpp
     utf-8.cpp
+    bump_alloc.hpp
+    bump_alloc.cpp
 )
 target_link_libraries(jlox_sources
     INTERFACE

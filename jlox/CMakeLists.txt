@@ -13,6 +13,7 @@ target_sources(jlox_sources INTERFACE
     utf-8.cpp
     bump_alloc.hpp
     bump_alloc.cpp
+    expr.hpp
 )
 target_link_libraries(jlox_sources
     INTERFACE
@@ -35,6 +36,7 @@ target_link_libraries(jlox
 
 add_executable(jlox_tests
     test_main.cpp
+    expr_tests.cpp
 )
 target_link_libraries(jlox_tests
     jlox_sources

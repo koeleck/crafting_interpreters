@@ -556,3 +556,13 @@ int32_t OffsetToLine::get_offset(const int32_t line) const noexcept
 
     return m_offsets[static_cast<size_t>(line - 1)];
 }
+
+
+std::string_view get_line_from_offset(std::string_view source, const int32_t offset)
+{
+    const auto end = source.find('\n', offset);
+    if (end == source.npos) {
+        return source.substr(offset);
+    }
+    return source.substr(offset, end - offset);
+}

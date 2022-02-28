@@ -43,4 +43,6 @@ struct ScannerResult
     int32_t num_errors{0};
 };
 
+std::string_view get_line_from_offset(std::string_view source, int32_t offset);
+
 ScannerResult scan_tokens(std::string_view source);

@@ -120,7 +120,8 @@ struct LiteralExpr : ExprCRTC<LiteralExpr>
                 value->type() == TokenType::STRING ||
                 value->type() == TokenType::TRUE ||
                 value->type() == TokenType::FALSE ||
-                value->type() == TokenType::NIL));
+                value->type() == TokenType::NIL ||
+                value->type() == TokenType::IDENTIFIER));
     }
 
     const Token* value;
@@ -135,7 +136,7 @@ struct UnaryExpr : ExprCRTC<UnaryExpr>
     {
         assert(op && right && (
                 op->type() == TokenType::MINUS ||
-                op->type() == TokenType::BANG_EQUAL));
+                op->type() == TokenType::BANG));
     }
 
     const Token* op;

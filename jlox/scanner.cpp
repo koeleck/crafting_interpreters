@@ -392,7 +392,7 @@ ScannerResult scan_tokens(std::string_view source)
                                  reader.get_line(line),
                                  "Unterminated string.");
                 } else {
-                    add_token(STRING, offset, str_length);
+                    add_token(STRING, offset, str_length + 2);
                 }
             }
             break;
@@ -481,7 +481,7 @@ TEST_CASE("scanner")
 
         CHECK(result.tokens.size() == 2);
         CHECK(result.tokens[0].type() == TokenType::STRING);
-        CHECK(result.tokens[0].length() == 6);
+        CHECK(result.tokens[0].length() == 8); // 6 bytes for UTF-8 string + 2 bytes for the quotes
         CHECK(result.tokens[0].offset() == 3);
     }
 

@@ -5,11 +5,31 @@
 #include <string_view>
 
 #include "log.hpp"
+#include "scanner.hpp"
+#include "parser.hpp"
+#include "bump_alloc.hpp"
+
+#include "print_visitor.hpp"
 
 static
 int run(std::string_view source)
 {
-    std::cout << source;
+    std::cout << source << '\n';
+    const auto scan_result = scan_tokens(source);
+    if (scan_result.num_errors != 0) {
+        std::cerr << "Lexing failed.\n";
+        return 1;
+    }
+    BumpAlloc alloc;
+    Expr* const expr = parse(alloc, scan_result);
+    if (!expr) {
+        std::cerr << "Parsing failed.\n";
+        return 1;
+    }
+    PrintVisitor visitor{scan_result.source};
+    expr->accept(visitor);
+    std::cout << visitor.get() << '\n';
+
     return 0;
 }
 
@@ -47,7 +67,7 @@ int run_prompt()
     for (std::string line; std::getline(std::cin, line); ) {
         const int result = run(line);
         if (result) {
-            return result;
+            std::cerr << "Error [" << result << ']';
         }
         std::cout << "\n> ";
     }

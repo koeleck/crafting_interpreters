@@ -22,7 +22,7 @@ enum class TokenType: uint8_t
     AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
     PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE,
 
-    END_OF_FILE
+    END_OF_FILE,
 };
 
 std::string_view token_to_string(TokenType token_type) noexcept;

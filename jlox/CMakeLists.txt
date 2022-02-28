@@ -14,6 +14,11 @@ target_sources(jlox_sources INTERFACE
     bump_alloc.hpp
     bump_alloc.cpp
     expr.hpp
+    parser.hpp
+    parser.cpp
+
+    print_visitor.hpp
+    print_visitor.cpp
 )
 target_link_libraries(jlox_sources
     INTERFACE

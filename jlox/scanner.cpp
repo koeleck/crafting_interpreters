@@ -255,7 +255,7 @@ TokenType get_type_of_identifier(std::string_view source,
                                  int32_t length)
 {
     using enum TokenType;
-    assert(offset > 0 && length > 0);
+    assert(offset >= 0 && length > 0);
     assert(static_cast<size_t>(offset + length) <= source.size());
     std::string_view tok = source.substr(offset, length);
 #define CHK_KEYWRD(str, type) if (STRINGIFY(str) == tok) { return type; }

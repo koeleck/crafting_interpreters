@@ -177,7 +177,7 @@ private:
                     return nullptr;
                 }
                 advance();
-                return m_alloc.allocate<GroupingExpr>(group);
+                return m_alloc.allocate<GroupingExpr>(token, group, lookahead);
             }
 
         case NIL:

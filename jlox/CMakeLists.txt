@@ -17,6 +17,9 @@ target_sources(jlox_sources INTERFACE
     parser.hpp
     parser.cpp
 
+    interpreter.hpp
+    interpreter.cpp
+
     print_visitor.hpp
     print_visitor.cpp
 )

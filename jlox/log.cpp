@@ -2,6 +2,8 @@
 
 #include <cassert>
 
+#include "scanner.hpp"
+
 namespace detail
 {
 
@@ -30,6 +32,14 @@ void report_error_end(const int line,
         }
         fmt::print(stderr, fg(fmt::color::cyan), FMT_STRING("^--- Here.\n"));
     }
+}
+
+ErrorContext get_context(const ScannerResult& scanner_result, const Token& token) noexcept
+{
+    const Position pos = scanner_result.offsets.get_position(token.offset());
+    const std::string_view line = get_line_from_offset(scanner_result.source, scanner_result.offsets.get_offset(pos.line));
+
+    return {pos.line, pos.column, line};
 }
 
 } // namespace detail

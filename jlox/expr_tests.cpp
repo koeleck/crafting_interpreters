@@ -19,7 +19,7 @@ TEST_CASE("Expr/Visitor")
     UnaryExpr minus{&result.tokens[0], &v123};
 
     LiteralExpr v4567{&result.tokens[4]};
-    GroupingExpr group{&v4567};
+    GroupingExpr group{&result.tokens[3], &v4567, &result.tokens[5]};
 
     BinaryExpr binary{&minus, &result.tokens[2], &group};
 

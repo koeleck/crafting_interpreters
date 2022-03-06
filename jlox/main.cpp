@@ -10,11 +10,11 @@
 #include "bump_alloc.hpp"
 
 #include "print_visitor.hpp"
+#include "interpreter.hpp"
 
 static
 int run(std::string_view source)
 {
-    std::cout << source << '\n';
     const auto scan_result = scan_tokens(source);
     if (scan_result.num_errors != 0) {
         std::cerr << "Lexing failed.\n";
@@ -28,7 +28,28 @@ int run(std::string_view source)
     }
     PrintVisitor visitor{scan_result.source};
     expr->accept(visitor);
-    std::cout << visitor.get() << '\n';
+    std::cout << "AST: " << visitor.get() << '\n';
+
+    Interpreter interpreter{scan_result};
+
+    const std::optional<Interpreter::Value> result = interpreter.evaluate(*expr);
+    if (!result) {
+        std::cerr << "Interpreter error.\n";
+    } else {
+        const Interpreter::Value& value = *result;
+        std::cout << "-> ";
+        if (std::get_if<Interpreter::Nil>(&value)) {
+            std::cout << "nil\n";
+        } else if (const double* const d = std::get_if<double>(&value)) {
+            std::cout << *d << '\n';
+        } else if (const std::string* const s = std::get_if<std::string>(&value)) {
+            std::cout << *s << '\n';
+        } else if (const bool* const b = std::get_if<bool>(&value)) {
+            std::cout << (*b ? "true\n" : "false\n");
+        } else {
+            std::abort();
+        }
+    }
 
     return 0;
 }

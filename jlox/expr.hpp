@@ -38,19 +38,28 @@ public:
         m_accept(this, visitor);
     }
 
+    const Token* get_main_token() const noexcept
+    {
+        return m_get_main_token(this);
+    }
+
+
 protected:
     template <typename T>
     friend class ExprCRTC;
 
     constexpr
-    Expr(void (*accept)(Expr*, Visitor&)) noexcept
+    Expr(void (*accept)(Expr*, Visitor&),
+         const Token* (*mt)(const Expr*) noexcept) noexcept
       : m_accept{accept}
+      , m_get_main_token{mt}
     {
         assert(m_accept);
     }
 
 private:
     void (*m_accept)(Expr*, Visitor&);
+    const Token* (*m_get_main_token)(const Expr*) noexcept;
 };
 
 template <typename T>
@@ -59,7 +68,7 @@ class ExprCRTC : public Expr
 protected:
     constexpr
     ExprCRTC() noexcept
-      : Expr{&ExprCRTC::accept_impl}
+      : Expr{&ExprCRTC::accept_impl, &ExprCRTC::get_main_token_impl}
     {}
 
 private:
@@ -68,6 +77,16 @@ private:
     {
         static_assert(std::is_base_of_v<ExprCRTC<T>, T>);
         visitor.visit(*static_cast<T*>(e));
+    }
+
+    static
+    const Token* get_main_token_impl(const Expr* e) noexcept
+    {
+        static_assert(std::is_base_of_v<ExprCRTC<T>, T>);
+        const T* const impl = static_cast<const T*>(e);
+
+
+        return (*impl).*(T::main_token);
     }
 };
 
@@ -95,18 +114,28 @@ struct BinaryExpr : ExprCRTC<BinaryExpr>
     Expr* left;
     const Token* op;
     Expr* right;
+
+    static constexpr auto main_token = &BinaryExpr::op;
 };
 
 struct GroupingExpr : ExprCRTC<GroupingExpr>
 {
     constexpr
-    GroupingExpr(Expr* expr) noexcept
-      : expr{expr}
+    GroupingExpr(const Token* parens_beg, Expr* expr, const Token* parens_end) noexcept
+      : begin{parens_beg}
+      , expr{expr}
+      , end{parens_end}
     {
-        assert(expr);
+        assert(begin && end && expr &&
+               begin->type() == TokenType::LEFT_PAREN &&
+               end->type() == TokenType::RIGHT_PAREN);
     }
 
+    const Token* begin;
     Expr* expr;
+    const Token* end;
+
+    static constexpr auto main_token = &GroupingExpr::begin;
 };
 
 struct LiteralExpr : ExprCRTC<LiteralExpr>
@@ -125,6 +154,7 @@ struct LiteralExpr : ExprCRTC<LiteralExpr>
     }
 
     const Token* value;
+    static constexpr auto main_token = &LiteralExpr::value;
 };
 
 struct UnaryExpr : ExprCRTC<UnaryExpr>
@@ -141,4 +171,5 @@ struct UnaryExpr : ExprCRTC<UnaryExpr>
 
     const Token* op;
     Expr* right;
+    static constexpr auto main_token = &UnaryExpr::op;
 };

@@ -124,6 +124,22 @@ void check_operand_type(const Interpreter::Value& value,
     }
 }
 
+
+std::string stringify(const Interpreter::Value& value)
+{
+    if (std::get_if<Interpreter::Nil>(&value)) {
+        return "nil";
+    } else if (const double* const d = std::get_if<double>(&value)) {
+        return fmt::to_string(*d);
+    } else if (const std::string* const s = std::get_if<std::string>(&value)) {
+        return *s;
+    } else if (const bool* const b = std::get_if<bool>(&value)) {
+        return (*b ? "true\n" : "false\n");
+    } else {
+        std::abort();
+    }
+}
+
 } // anonymous namespace
 
 
@@ -132,6 +148,15 @@ Interpreter::~Interpreter() = default;
 Interpreter::Interpreter(const ScannerResult& scanner_result)
   : m_scanner_result{scanner_result}
 {}
+
+std::optional<Interpreter::Value> Interpreter::execute(Stmt& stmt)
+{
+    stmt.accept(*this);
+    assert(m_stack.empty() == false);
+    Value result = std::move(m_stack.back());
+    m_stack.pop_back();
+    return result;
+}
 
 std::optional<Interpreter::Value> Interpreter::evaluate(Expr& expr)
 {
@@ -307,6 +332,36 @@ void Interpreter::visit(UnaryExpr& unary_expr)
 void Interpreter::unkown_expr(Expr& expr)
 {
     static_cast<void>(expr);
+    std::abort();
+}
+
+
+void Interpreter::visit(ExprStmt& expr_stmt)
+{
+    assert(expr_stmt.expr);
+    evaluate_impl_nopop(*expr_stmt.expr);
+}
+
+
+void Interpreter::visit(PrintStmt& print_stmt)
+{
+    assert(print_stmt.expr);
+    evaluate_impl_nopop(*print_stmt.expr);
+
+    assert(m_stack.empty() == false);
+    if (std::get_if<std::string>(&m_stack.back()) == nullptr) {
+        Value value = std::move(m_stack.back());
+        m_stack.pop_back();
+
+        m_stack.emplace_back(stringify(value));
+    }
+
+    const std::string* s = std::get_if<std::string>(&m_stack.back());
+    fmt::print(" :: {}\n", *s);
+}
+
+void Interpreter::unkown_stmt(Stmt&)
+{
     std::abort();
 }
 

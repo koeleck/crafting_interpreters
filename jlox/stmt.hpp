@@ -35,6 +35,13 @@ public:
         m_accept(*this, visitor);
     }
 
+    template <typename T>
+    bool is_type() const noexcept
+    {
+        using TBase = StmtCRTC<T>;
+        return m_accept == &TBase::accept_impl;
+    }
+
 protected:
     template <typename T>
     friend class StmtCRTC;
@@ -60,6 +67,8 @@ protected:
     {}
 
 private:
+    friend class Stmt;
+
     static
     void accept_impl(Stmt& e, StmtVisitor& visitor)
     {
@@ -80,7 +89,7 @@ struct ExprStmt : StmtCRTC<ExprStmt>
     Expr* expr{nullptr};
 };
 
-struct PrintStmt : StmtCRTC<ExprStmt>
+struct PrintStmt : StmtCRTC<PrintStmt>
 {
     constexpr
     PrintStmt(Expr* expr) noexcept

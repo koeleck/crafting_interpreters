@@ -5,10 +5,12 @@
 #include <vector>
 #include <string>
 #include "expr.hpp"
+#include "stmt.hpp"
 
 struct ScannerResult;
 
 class Interpreter final : public ExprVisitor
+                        , public StmtVisitor
 {
 public:
     Interpreter(const ScannerResult& scanner_result);
@@ -23,11 +25,18 @@ public:
     [[nodiscard]]
     std::optional<Value> evaluate(Expr& expr);
 
+    [[nodiscard]]
+    std::optional<Value> execute(Stmt& stmt);
+
     void visit(BinaryExpr& binar_expr) override;
     void visit(GroupingExpr& grouping_expr) override;
     void visit(LiteralExpr& literal_expr) override;
     void visit(UnaryExpr& unary_expr) override;
     void unkown_expr(Expr& expr) override;
+
+    void visit(ExprStmt& expr_stmt) override;
+    void visit(PrintStmt& expr_stmt) override;
+    void unkown_stmt(Stmt& stmt) override;
 
 private:
     [[nodiscard]]

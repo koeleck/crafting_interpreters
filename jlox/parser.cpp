@@ -8,6 +8,7 @@
 #include "bump_alloc.hpp"
 #include "scanner.hpp"
 #include "log.hpp"
+#include "stmt.hpp"
 
 namespace
 {
@@ -47,10 +48,10 @@ int32_t get_binary_prio(TokenType type) noexcept
     return -1;
 }
 
-class ExprParser
+class LoxParser
 {
 public:
-    ExprParser(BumpAlloc& alloc,
+    LoxParser(BumpAlloc& alloc,
                const ScannerResult& scanner_result)
       : m_alloc{alloc}
       , m_scanner_result{scanner_result}
@@ -60,27 +61,28 @@ public:
                m_scanner_result.tokens.back().type() == TokenType::END_OF_FILE);
     }
 
-    Expr* parse()
+    std::vector<Stmt*> parse()
     {
-        if (eof()) {
-            return nullptr;
+        std::vector<Stmt*> statements;
+
+        while (!eof()) {
+            Stmt* const stmt = parse_statement();
+            if (stmt) {
+                statements.push_back(stmt);
+            } else {
+                synchronize();
+            }
         }
 
-        Expr* const result = parse_expression();
-        if (!result) {
-            synchronize();
-        }
-        // TODO: Remove me
-        if (!eof()) {
-        }
-        return result;
+        return statements;
     }
 
 private:
 
     bool eof() const noexcept
     {
-        return static_cast<size_t>(m_current) >= m_scanner_result.tokens.size();
+        assert(static_cast<size_t>(m_current) < m_scanner_result.tokens.size());
+        return m_scanner_result.tokens[m_current].type() == TokenType::END_OF_FILE;
     }
 
     void synchronize()
@@ -114,6 +116,19 @@ private:
             return nxt;
         }
         return nullptr;
+    }
+
+
+    template <typename Fmt, typename... Args>
+    bool consume(TokenType expected, Fmt err_msg, Args&&... args)
+    {
+        const Token* const lookahead = peek();
+        if (lookahead->type() != expected) {
+            report_error(lookahead, std::forward<Fmt>(err_msg), std::forward<Args>(args)...);
+            return false;
+        }
+        ++m_current;
+        return true;
     }
 
     Expr* parse_expression()
@@ -206,6 +221,30 @@ private:
         return nullptr;
     }
 
+
+    Stmt* parse_statement()
+    {
+        if (match(TokenType::PRINT)) {
+            Expr* const expr = parse_expression();
+            if (!expr) {
+                return nullptr;
+            }
+            if (!consume(TokenType::SEMICOLON, "Expect ';' after expression.")) {
+                return nullptr;
+            }
+            return m_alloc.allocate<PrintStmt>(expr);
+        }
+
+        Expr* const expr = parse_expression();
+        if (!expr) {
+            return nullptr;
+        }
+        if (!consume(TokenType::SEMICOLON, "Expect ';' after expression.")) {
+            return nullptr;
+        }
+        return m_alloc.allocate<ExprStmt>(expr);
+    }
+
     template <typename Fmt, typename... Args>
     void report_error(const Token* token, Fmt&& format_str, Args&&... args)
     {
@@ -224,11 +263,11 @@ private:
 
 } // namespace
 
-Expr*
+std::vector<Stmt*>
 parse(BumpAlloc& alloc,
       const ScannerResult& scanner_result)
 {
-    ExprParser parser{alloc, scanner_result};
+    LoxParser parser{alloc, scanner_result};
     return parser.parse();
 }
 
@@ -238,15 +277,19 @@ parse(BumpAlloc& alloc,
 
 TEST_CASE("Parser Test")
 {
-    std::string_view source{"5 * !6 + 7 * -8 * ((1 + 2) * 3)"};
+    std::string_view source{"5 * !6 + 7 * -8 * ((1 + 2) * 3);"};
     auto result = scan_tokens(source);
     CHECK(result.num_errors == 0);
 
     BumpAlloc alloc;
 
-    Expr* const expr = parse(alloc, result);
-    CHECK(expr != nullptr);
+    //Expr* const expr = parse(alloc, result);
+    std::vector<Stmt*> statements = parse(alloc, result);
+    CHECK(statements.empty() == false);
+    Stmt* const stmt = statements.front();
+    CHECK(stmt->is_type<ExprStmt>());
 
+    Expr* const expr = static_cast<ExprStmt*>(stmt)->expr;
     PrintVisitor visitor{result.source};
     expr->accept(visitor);
 

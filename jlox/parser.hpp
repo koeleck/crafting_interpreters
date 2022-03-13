@@ -2,10 +2,11 @@
 
 #include <span>
 #include <string_view>
+#include <vector>
 
 class BumpAlloc;
 struct ScannerResult;
 class Expr;
 class Stmt;
 
-Expr* parse(BumpAlloc& alloc, const ScannerResult& scanner_result);
+std::vector<Stmt*> parse(BumpAlloc& alloc, const ScannerResult& scanner_result);

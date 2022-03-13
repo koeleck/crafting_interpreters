@@ -8,7 +8,7 @@
 
 struct ScannerResult;
 
-class Interpreter final : public Visitor
+class Interpreter final : public ExprVisitor
 {
 public:
     Interpreter(const ScannerResult& scanner_result);

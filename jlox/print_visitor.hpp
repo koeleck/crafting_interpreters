@@ -2,7 +2,7 @@
 
 #include "expr.hpp"
 
-class PrintVisitor final : public Visitor
+class PrintVisitor final : public ExprVisitor
 {
 public:
     PrintVisitor(std::string_view source) noexcept;

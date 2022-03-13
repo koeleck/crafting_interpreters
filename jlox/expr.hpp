@@ -9,10 +9,10 @@ struct GroupingExpr;
 struct LiteralExpr;
 struct UnaryExpr;
 
-class Visitor
+class ExprVisitor
 {
 public:
-    virtual ~Visitor() = default;
+    virtual ~ExprVisitor() = default;
 
     virtual void visit(BinaryExpr& binar_expr) = 0;
     virtual void visit(GroupingExpr& grouping_expr) = 0;
@@ -33,14 +33,14 @@ class Expr
 public:
     Expr() = delete;
 
-    void accept(Visitor& visitor)
+    void accept(ExprVisitor& visitor)
     {
-        m_accept(this, visitor);
+        m_accept(*this, visitor);
     }
 
     const Token* get_main_token() const noexcept
     {
-        return m_get_main_token(this);
+        return m_get_main_token(*this);
     }
 
 
@@ -49,8 +49,8 @@ protected:
     friend class ExprCRTC;
 
     constexpr
-    Expr(void (*accept)(Expr*, Visitor&),
-         const Token* (*mt)(const Expr*) noexcept) noexcept
+    Expr(void (*accept)(Expr&, ExprVisitor&),
+         const Token* (*mt)(const Expr&) noexcept) noexcept
       : m_accept{accept}
       , m_get_main_token{mt}
     {
@@ -58,8 +58,8 @@ protected:
     }
 
 private:
-    void (*m_accept)(Expr*, Visitor&);
-    const Token* (*m_get_main_token)(const Expr*) noexcept;
+    void (*m_accept)(Expr&, ExprVisitor&);
+    const Token* (*m_get_main_token)(const Expr&) noexcept;
 };
 
 template <typename T>
@@ -73,20 +73,20 @@ protected:
 
 private:
     static
-    void accept_impl(Expr* e, Visitor& visitor)
+    void accept_impl(Expr& e, ExprVisitor& visitor)
     {
         static_assert(std::is_base_of_v<ExprCRTC<T>, T>);
-        visitor.visit(*static_cast<T*>(e));
+        visitor.visit(static_cast<T&>(e));
     }
 
     static
-    const Token* get_main_token_impl(const Expr* e) noexcept
+    const Token* get_main_token_impl(const Expr& e) noexcept
     {
         static_assert(std::is_base_of_v<ExprCRTC<T>, T>);
-        const T* const impl = static_cast<const T*>(e);
+        const T& impl = static_cast<const T&>(e);
 
 
-        return (*impl).*(T::main_token);
+        return impl.*(T::main_token);
     }
 };
 

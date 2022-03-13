@@ -14,6 +14,7 @@ target_sources(jlox_sources INTERFACE
     bump_alloc.hpp
     bump_alloc.cpp
     expr.hpp
+    stmt.hpp
     parser.hpp
     parser.cpp
 

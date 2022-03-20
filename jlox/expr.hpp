@@ -151,8 +151,7 @@ struct LiteralExpr : ExprCRTC<LiteralExpr>
                 value->type() == TokenType::STRING ||
                 value->type() == TokenType::TRUE ||
                 value->type() == TokenType::FALSE ||
-                value->type() == TokenType::NIL ||
-                value->type() == TokenType::IDENTIFIER));
+                value->type() == TokenType::NIL));
     }
 
     const Token* value;

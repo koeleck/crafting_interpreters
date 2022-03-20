@@ -300,10 +300,6 @@ void Interpreter::visit(LiteralExpr& literal_expr)
         m_stack.emplace_back(Nil{});
         break;
 
-    case IDENTIFIER:
-        report_error(m_scanner_result, *literal_expr.get_main_token(), "Identifiers not implemented yet");
-        throw InterpreterError{};
-
     default:
         std::abort();
     }

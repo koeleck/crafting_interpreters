@@ -19,13 +19,14 @@ public:
     ~Interpreter();
 
     [[nodiscard]]
-    std::optional<Value> execute(Stmt& stmt);
+    bool execute(Stmt& stmt);
 
     void visit(BinaryExpr& binar_expr) override;
     void visit(GroupingExpr& grouping_expr) override;
     void visit(LiteralExpr& literal_expr) override;
     void visit(UnaryExpr& unary_expr) override;
     void visit(VarExpr& var_expr) override;
+    void visit(AssignExpr& assign_expr) override;
     void unkown_expr(Expr& expr) override;
 
     void visit(ExprStmt& expr_stmt) override;

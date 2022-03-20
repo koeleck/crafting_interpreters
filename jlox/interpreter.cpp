@@ -150,17 +150,17 @@ Interpreter::Interpreter(const ScannerResult& scanner_result, Environment& envir
   , m_env{environment}
 {}
 
-std::optional<Value> Interpreter::execute(Stmt& stmt)
+bool Interpreter::execute(Stmt& stmt)
 {
+    assert(m_stack.empty() == true);
     try {
         stmt.accept(*this);
     } catch (const InterpreterError&) {
-        return {};
+        assert(m_stack.empty() == true);
+        return false;
     }
-    assert(m_stack.empty() == false);
-    Value result = std::move(m_stack.back());
-    m_stack.pop_back();
-    return result;
+    assert(m_stack.empty() == true);
+    return true;
 }
 
 Value Interpreter::evaluate_impl(Expr& expr)
@@ -180,12 +180,6 @@ void Interpreter::evaluate_impl_nopop(Expr& expr)
     } catch (...) {
         m_stack.resize(prev_stack_size);
         throw;
-    }
-
-    const size_t stack_size = m_stack.size();
-    if (stack_size != (prev_stack_size + 1)) {
-        // TODO:
-        std::abort();
     }
 }
 
@@ -333,6 +327,21 @@ void Interpreter::visit(VarExpr& var_expr)
     m_stack.push_back(*value);
 }
 
+void Interpreter::visit(AssignExpr& assign_expr)
+{
+    const std::string_view name = assign_expr.identifier->lexeme(m_scanner_result.source);
+    Value* const value = m_env.get(name);
+    if (!value) {
+        report_error(m_scanner_result, *assign_expr.identifier, "Undefined variable '{}'.", name);
+        throw InterpreterError{};
+    }
+
+    evaluate_impl_nopop(*assign_expr.value);
+
+    *value = std::move(m_stack.back());
+    m_stack.pop_back();
+}
+
 void Interpreter::unkown_expr(Expr& expr)
 {
     static_cast<void>(expr);
@@ -344,6 +353,7 @@ void Interpreter::visit(ExprStmt& expr_stmt)
 {
     assert(expr_stmt.expr);
     evaluate_impl_nopop(*expr_stmt.expr);
+    m_stack.clear();
 }
 
 
@@ -353,27 +363,27 @@ void Interpreter::visit(PrintStmt& print_stmt)
     evaluate_impl_nopop(*print_stmt.expr);
 
     assert(m_stack.empty() == false);
-    if (std::get_if<std::string>(&m_stack.back()) == nullptr) {
+
+    std::string tmp;
+    std::string* sptr = std::get_if<std::string>(&m_stack.back());
+    if (!sptr) {
         Value value = std::move(m_stack.back());
-        m_stack.pop_back();
-
-        m_stack.emplace_back(stringify(value));
+        tmp = stringify(value);
+        sptr = &tmp;
     }
-
-    const std::string* s = std::get_if<std::string>(&m_stack.back());
-    fmt::print(" :: {}\n", *s);
+    fmt::print(" :: {}\n", *sptr);
+    m_stack.pop_back();
 }
 
 
 void Interpreter::visit(VarStmt& var_stmt)
 {
+    Value val{nil};
     if (var_stmt.initializer) {
-        evaluate_impl_nopop(*var_stmt.initializer);
-    } else {
-        m_stack.emplace_back(nil);
+        val = evaluate_impl(*var_stmt.initializer);
     }
     m_env.define(var_stmt.identifier->lexeme(m_scanner_result.source),
-                 m_stack.back());
+                 std::move(val));
 }
 
 void Interpreter::unkown_stmt(Stmt&)

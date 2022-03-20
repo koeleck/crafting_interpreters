@@ -24,6 +24,9 @@ int32_t get_binary_prio(TokenType type) noexcept
 {
     switch (type) {
     using enum TokenType;
+    case EQUAL:
+        return 0;
+
     case EQUAL_EQUAL:
     case BANG_EQUAL:
         return 10;
@@ -176,7 +179,17 @@ private:
                     break;
                 }
             }
-            lhs = m_alloc.allocate<BinaryExpr>(lhs, op, rhs);
+
+            if (op->type() == TokenType::EQUAL) {
+                if (lhs->is_type<VarExpr>()) {
+                    const Token* const identifier = lhs->get_main_token();
+                    lhs = m_alloc.allocate<AssignExpr>(identifier, rhs);
+                } else {
+                    report_error(op, "Invalid assignment");
+                }
+            } else {
+                lhs = m_alloc.allocate<BinaryExpr>(lhs, op, rhs);
+            }
         }
         return lhs;
     }

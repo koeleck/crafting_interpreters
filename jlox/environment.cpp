@@ -22,3 +22,12 @@ const Value* Environment::get(std::string_view name) const noexcept
     }
     return &it->second;
 }
+
+Value* Environment::get(std::string_view name) noexcept
+{
+    const auto it = m_values.find(name);
+    if (it == m_values.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}

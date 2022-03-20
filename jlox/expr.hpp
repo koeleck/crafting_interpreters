@@ -9,6 +9,7 @@ struct GroupingExpr;
 struct LiteralExpr;
 struct UnaryExpr;
 struct VarExpr;
+struct AssignExpr;
 
 class ExprVisitor
 {
@@ -20,6 +21,7 @@ public:
     virtual void visit(LiteralExpr& literal_expr) = 0;
     virtual void visit(UnaryExpr& unary_expr) = 0;
     virtual void visit(VarExpr& var_expr) = 0;
+    virtual void visit(AssignExpr& assign_expr) = 0;
     virtual void unkown_expr(Expr& expr) = 0;
 
     void visit(Expr& expr) {
@@ -43,6 +45,13 @@ public:
     const Token* get_main_token() const noexcept
     {
         return m_get_main_token(*this);
+    }
+
+    template <typename T>
+    bool is_type() const noexcept
+    {
+        using TBase = ExprCRTC<T>;
+        return m_accept == &TBase::accept_impl;
     }
 
 
@@ -74,6 +83,8 @@ protected:
     {}
 
 private:
+    friend class Expr;
+
     static
     void accept_impl(Expr& e, ExprVisitor& visitor)
     {
@@ -186,4 +197,20 @@ struct VarExpr : ExprCRTC<VarExpr>
 
     const Token* identifier;
     static constexpr auto main_token = &VarExpr::identifier;
+};
+
+struct AssignExpr : ExprCRTC<AssignExpr>
+{
+    constexpr
+    AssignExpr(const Token* identifier, Expr* value) noexcept
+      : identifier{identifier}
+      , value{value}
+    {
+        assert(identifier && identifier->type() == TokenType::IDENTIFIER);
+        assert(value);
+    }
+
+    const Token* identifier;
+    Expr* value;
+    static constexpr auto main_token = &AssignExpr::identifier;
 };

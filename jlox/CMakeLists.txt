@@ -1,5 +1,6 @@
 find_package(fmt REQUIRED)
 find_package(doctest REQUIRED)
+find_package(absl REQUIRED COMPONENTS flat_hash_map)
 
 add_library(jlox_sources INTERFACE)
 target_sources(jlox_sources INTERFACE
@@ -23,11 +24,15 @@ target_sources(jlox_sources INTERFACE
 
     print_visitor.hpp
     print_visitor.cpp
+
+    environment.hpp
+    environment.cpp
 )
 target_link_libraries(jlox_sources
     INTERFACE
         fmt::fmt
         doctest::doctest
+        absl::flat_hash_map
 )
 
 add_executable(jlox

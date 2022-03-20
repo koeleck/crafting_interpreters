@@ -69,7 +69,7 @@ public:
             Stmt* const stmt = parse_declaration();
             if (stmt) {
                 statements.push_back(stmt);
-            } else {
+            } else if (!eof()) {
                 advance();
             }
         }

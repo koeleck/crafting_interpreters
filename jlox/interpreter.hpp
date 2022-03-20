@@ -7,6 +7,7 @@
 #include "expr.hpp"
 #include "stmt.hpp"
 #include "value.hpp"
+#include "environment.hpp"
 
 struct ScannerResult;
 
@@ -14,11 +15,8 @@ class Interpreter final : public ExprVisitor
                         , public StmtVisitor
 {
 public:
-    Interpreter(const ScannerResult& scanner_result);
+    Interpreter(const ScannerResult& scanner_result, Environment& environment);
     ~Interpreter();
-
-    [[nodiscard]]
-    std::optional<Value> evaluate(Expr& expr);
 
     [[nodiscard]]
     std::optional<Value> execute(Stmt& stmt);
@@ -49,4 +47,5 @@ private:
 
     std::vector<Value> m_stack;
     const ScannerResult& m_scanner_result;
+    Environment& m_env;
 };

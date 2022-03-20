@@ -106,13 +106,13 @@ struct PrintStmt : StmtCRTC<PrintStmt>
 struct VarStmt : StmtCRTC<VarStmt>
 {
     constexpr
-    VarStmt(const Token* identifier, Expr* expr) noexcept
+    VarStmt(const Token* identifier, Expr* initializer) noexcept
       : identifier{identifier}
-      , expr{expr}
+      , initializer{initializer}
     {
         assert(identifier && identifier->type() == TokenType::IDENTIFIER);
     }
 
     const Token* identifier{nullptr};
-    Expr* expr{nullptr};
+    Expr* initializer{nullptr};
 };

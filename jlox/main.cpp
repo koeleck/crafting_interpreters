@@ -11,9 +11,10 @@
 
 #include "print_visitor.hpp"
 #include "interpreter.hpp"
+#include "environment.hpp"
 
 static
-int run(std::string_view source)
+int run(std::string_view source, Environment& environment)
 {
     const auto scan_result = scan_tokens(source);
     if (scan_result.num_errors != 0) {
@@ -26,7 +27,7 @@ int run(std::string_view source)
         return 0; // TODO: Error?
     }
 
-    Interpreter interpreter{scan_result};
+    Interpreter interpreter{scan_result, environment};
 
     for (Stmt* stmt : statements) {
         const std::optional<Value> result = interpreter.execute(*stmt);
@@ -61,16 +62,19 @@ int run_file(const char* path)
         content.resize(static_cast<size_t>(len));
         input_file.read(&content.front(), len);
     }
-    return run(content);
+
+    Environment env{};
+    return run(content, env);
 }
 
 
 static
 int run_prompt()
 {
+    Environment env{};
     std::cout << "> ";
     for (std::string line; std::getline(std::cin, line); ) {
-        const int result = run(line);
+        const int result = run(line, env);
         if (result) {
             std::cerr << "Error [" << result << ']';
         }

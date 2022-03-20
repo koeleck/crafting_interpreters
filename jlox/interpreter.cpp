@@ -145,31 +145,22 @@ std::string stringify(const Value& value)
 
 Interpreter::~Interpreter() = default;
 
-Interpreter::Interpreter(const ScannerResult& scanner_result)
+Interpreter::Interpreter(const ScannerResult& scanner_result, Environment& environment)
   : m_scanner_result{scanner_result}
+  , m_env{environment}
 {}
 
 std::optional<Value> Interpreter::execute(Stmt& stmt)
 {
-    stmt.accept(*this);
+    try {
+        stmt.accept(*this);
+    } catch (const InterpreterError&) {
+        return {};
+    }
     assert(m_stack.empty() == false);
     Value result = std::move(m_stack.back());
     m_stack.pop_back();
     return result;
-}
-
-std::optional<Value> Interpreter::evaluate(Expr& expr)
-{
-    const size_t stack_size = m_stack.size();
-    try {
-        return evaluate_impl(expr);
-    } catch (const InterpreterError&) {
-        m_stack.resize(stack_size);
-        return {};
-    } catch (...) {
-        m_stack.resize(stack_size);
-        throw;
-    }
 }
 
 Value Interpreter::evaluate_impl(Expr& expr)
@@ -183,7 +174,13 @@ Value Interpreter::evaluate_impl(Expr& expr)
 void Interpreter::evaluate_impl_nopop(Expr& expr)
 {
     const size_t prev_stack_size = m_stack.size();
-    expr.accept(*this);
+
+    try {
+        expr.accept(*this);
+    } catch (...) {
+        m_stack.resize(prev_stack_size);
+        throw;
+    }
 
     const size_t stack_size = m_stack.size();
     if (stack_size != (prev_stack_size + 1)) {
@@ -328,6 +325,12 @@ void Interpreter::visit(UnaryExpr& unary_expr)
 
 void Interpreter::visit(VarExpr& var_expr)
 {
+    const Value* const value = m_env.get(var_expr.identifier->lexeme(m_scanner_result.source));
+    if (!value) {
+        report_error(m_scanner_result, *var_expr.identifier, "Identifier not found");
+        throw InterpreterError{};
+    }
+    m_stack.push_back(*value);
 }
 
 void Interpreter::unkown_expr(Expr& expr)
@@ -364,7 +367,13 @@ void Interpreter::visit(PrintStmt& print_stmt)
 
 void Interpreter::visit(VarStmt& var_stmt)
 {
-    m_stack.emplace_back(nil);
+    if (var_stmt.initializer) {
+        evaluate_impl_nopop(*var_stmt.initializer);
+    } else {
+        m_stack.emplace_back(nil);
+    }
+    m_env.define(var_stmt.identifier->lexeme(m_scanner_result.source),
+                 m_stack.back());
 }
 
 void Interpreter::unkown_stmt(Stmt&)

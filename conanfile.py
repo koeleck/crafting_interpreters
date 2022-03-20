@@ -10,6 +10,7 @@ class CraftingInterpretersConan(ConanFile):
     def requirements(self):
         self.requires("doctest/2.4.8")
         self.requires("fmt/8.1.1")
+        self.requires("abseil/20211102.0")
 
     def source(self):
         pass

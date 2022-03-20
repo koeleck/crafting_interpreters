@@ -10,7 +10,7 @@
 namespace
 {
 
-bool is_truthy(const Interpreter::Value& value) noexcept
+bool is_truthy(const Value& value) noexcept
 {
     if (const bool* const b = std::get_if<bool>(&value)) {
         return *b;
@@ -21,14 +21,14 @@ bool is_truthy(const Interpreter::Value& value) noexcept
     if (const double* const d = std::get_if<double>(&value)) {
         return *d != 0.;
     }
-    if (std::get_if<Interpreter::Nil>(&value)) {
+    if (std::get_if<Nil>(&value)) {
         return false;
     }
     std::abort();
 }
 
 template <typename T>
-bool is_equal_impl(const Interpreter::Value& lhs, const Interpreter::Value& rhs) noexcept
+bool is_equal_impl(const Value& lhs, const Value& rhs) noexcept
 {
     const T* const l = std::get_if<T>(&lhs);
     if (!l) {
@@ -41,10 +41,10 @@ bool is_equal_impl(const Interpreter::Value& lhs, const Interpreter::Value& rhs)
     return *l == *r;
 }
 
-bool is_equal(const Interpreter::Value& lhs, const Interpreter::Value& rhs) noexcept
+bool is_equal(const Value& lhs, const Value& rhs) noexcept
 {
 #define CHECK(Type) if (const Type* const l = std::get_if<Type>(&lhs), * const r = std::get_if<Type>(&rhs); l && r) { return *l == *r; }
-    CHECK(Interpreter::Nil)
+    CHECK(Nil)
     CHECK(bool)
     CHECK(std::string)
     CHECK(double)
@@ -72,7 +72,7 @@ std::string_view type_name<std::string>() noexcept
 
 template <>
 constexpr
-std::string_view type_name<Interpreter::Nil>() noexcept
+std::string_view type_name<Nil>() noexcept
 {
     return "nil";
 }
@@ -85,7 +85,7 @@ std::string_view type_name<bool>() noexcept
 }
 
 constexpr
-std::string_view type_name(const Interpreter::Value& value) noexcept
+std::string_view type_name(const Value& value) noexcept
 {
     if (std::get_if<std::string>(&value)) {
         return type_name<std::string>();
@@ -96,8 +96,8 @@ std::string_view type_name(const Interpreter::Value& value) noexcept
     if (std::get_if<bool>(&value)) {
         return type_name<bool>();
     }
-    if (std::get_if<Interpreter::Nil>(&value)) {
-        return type_name<Interpreter::Nil>();
+    if (std::get_if<Nil>(&value)) {
+        return type_name<Nil>();
     }
     std::abort();
 }
@@ -110,7 +110,7 @@ public:
 
 
 template <typename T>
-void check_operand_type(const Interpreter::Value& value,
+void check_operand_type(const Value& value,
                         const Token* token,
                         const ScannerResult& scanner_result)
 {
@@ -125,9 +125,9 @@ void check_operand_type(const Interpreter::Value& value,
 }
 
 
-std::string stringify(const Interpreter::Value& value)
+std::string stringify(const Value& value)
 {
-    if (std::get_if<Interpreter::Nil>(&value)) {
+    if (std::get_if<Nil>(&value)) {
         return "nil";
     } else if (const double* const d = std::get_if<double>(&value)) {
         return fmt::to_string(*d);
@@ -149,7 +149,7 @@ Interpreter::Interpreter(const ScannerResult& scanner_result)
   : m_scanner_result{scanner_result}
 {}
 
-std::optional<Interpreter::Value> Interpreter::execute(Stmt& stmt)
+std::optional<Value> Interpreter::execute(Stmt& stmt)
 {
     stmt.accept(*this);
     assert(m_stack.empty() == false);
@@ -158,7 +158,7 @@ std::optional<Interpreter::Value> Interpreter::execute(Stmt& stmt)
     return result;
 }
 
-std::optional<Interpreter::Value> Interpreter::evaluate(Expr& expr)
+std::optional<Value> Interpreter::evaluate(Expr& expr)
 {
     const size_t stack_size = m_stack.size();
     try {
@@ -172,7 +172,7 @@ std::optional<Interpreter::Value> Interpreter::evaluate(Expr& expr)
     }
 }
 
-Interpreter::Value Interpreter::evaluate_impl(Expr& expr)
+Value Interpreter::evaluate_impl(Expr& expr)
 {
     evaluate_impl_nopop(expr);
     Value result = std::move(m_stack.back());
@@ -368,7 +368,7 @@ void Interpreter::visit(PrintStmt& print_stmt)
 
 void Interpreter::visit(VarStmt& var_stmt)
 {
-    m_stack.emplace_back(Interpreter::Nil{});
+    m_stack.emplace_back(nil);
 }
 
 void Interpreter::unkown_stmt(Stmt&)

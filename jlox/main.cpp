@@ -29,7 +29,7 @@ int run(std::string_view source)
     Interpreter interpreter{scan_result};
 
     for (Stmt* stmt : statements) {
-        const std::optional<Interpreter::Value> result = interpreter.execute(*stmt);
+        const std::optional<Value> result = interpreter.execute(*stmt);
         if (!result) {
             std::cerr << "Interpreter error.\n";
         }

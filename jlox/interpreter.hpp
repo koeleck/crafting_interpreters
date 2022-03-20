@@ -1,11 +1,12 @@
 #pragma once
 
-#include <variant>
 #include <optional>
 #include <vector>
 #include <string>
+
 #include "expr.hpp"
 #include "stmt.hpp"
+#include "value.hpp"
 
 struct ScannerResult;
 
@@ -15,12 +16,6 @@ class Interpreter final : public ExprVisitor
 public:
     Interpreter(const ScannerResult& scanner_result);
     ~Interpreter();
-
-    struct Nil {
-        constexpr
-        bool operator==(Nil) const noexcept { return true; }
-    };
-    using Value = std::variant<Nil, bool, std::string, double>;
 
     [[nodiscard]]
     std::optional<Value> evaluate(Expr& expr);

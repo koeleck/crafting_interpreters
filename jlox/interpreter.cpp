@@ -329,6 +329,11 @@ void Interpreter::visit(UnaryExpr& unary_expr)
     }
 }
 
+
+void Interpreter::visit(VarExpr& var_expr)
+{
+}
+
 void Interpreter::unkown_expr(Expr& expr)
 {
     static_cast<void>(expr);
@@ -358,6 +363,12 @@ void Interpreter::visit(PrintStmt& print_stmt)
 
     const std::string* s = std::get_if<std::string>(&m_stack.back());
     fmt::print(" :: {}\n", *s);
+}
+
+
+void Interpreter::visit(VarStmt& var_stmt)
+{
+    m_stack.emplace_back(Interpreter::Nil{});
 }
 
 void Interpreter::unkown_stmt(Stmt&)

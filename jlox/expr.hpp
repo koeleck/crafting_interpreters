@@ -8,6 +8,7 @@ struct BinaryExpr;
 struct GroupingExpr;
 struct LiteralExpr;
 struct UnaryExpr;
+struct VarExpr;
 
 class ExprVisitor
 {
@@ -18,6 +19,7 @@ public:
     virtual void visit(GroupingExpr& grouping_expr) = 0;
     virtual void visit(LiteralExpr& literal_expr) = 0;
     virtual void visit(UnaryExpr& unary_expr) = 0;
+    virtual void visit(VarExpr& var_expr) = 0;
     virtual void unkown_expr(Expr& expr) = 0;
 
     void visit(Expr& expr) {
@@ -172,4 +174,17 @@ struct UnaryExpr : ExprCRTC<UnaryExpr>
     const Token* op;
     Expr* right;
     static constexpr auto main_token = &UnaryExpr::op;
+};
+
+struct VarExpr : ExprCRTC<VarExpr>
+{
+    constexpr
+    VarExpr(const Token* identifier) noexcept
+      : identifier{identifier}
+    {
+        assert(identifier && identifier->type() == TokenType::IDENTIFIER);
+    }
+
+    const Token* identifier;
+    static constexpr auto main_token = &VarExpr::identifier;
 };

@@ -66,11 +66,11 @@ public:
         std::vector<Stmt*> statements;
 
         while (!eof()) {
-            Stmt* const stmt = parse_statement();
+            Stmt* const stmt = parse_declaration();
             if (stmt) {
                 statements.push_back(stmt);
             } else {
-                synchronize();
+                advance();
             }
         }
 
@@ -108,6 +108,12 @@ private:
         return &m_scanner_result.tokens[m_current++];
     }
 
+    void unadvance() noexcept
+    {
+        assert(m_current > 0);
+        --m_current;
+    }
+
     const Token* match(TokenType type) noexcept
     {
         const Token* const nxt = peek();
@@ -120,15 +126,15 @@ private:
 
 
     template <typename Fmt, typename... Args>
-    bool consume(TokenType expected, Fmt err_msg, Args&&... args)
+    const Token* consume(TokenType expected, Fmt err_msg, Args&&... args)
     {
         const Token* const lookahead = peek();
         if (lookahead->type() != expected) {
             report_error(lookahead, std::forward<Fmt>(err_msg), std::forward<Args>(args)...);
-            return false;
+            return nullptr;
         }
         ++m_current;
-        return true;
+        return lookahead;
     }
 
     Expr* parse_expression()
@@ -198,10 +204,12 @@ private:
         case NIL:
         case TRUE:
         case FALSE:
-        case IDENTIFIER:
         case STRING:
         case NUMBER:
             return m_alloc.allocate<LiteralExpr>(token);
+
+        case IDENTIFIER:
+            return m_alloc.allocate<VarExpr>(token);
 
         case MINUS:
         case BANG:
@@ -216,6 +224,7 @@ private:
         default:
             break;
         }
+        unadvance();
         report_error(token, "Unexpected token \"{}\".", token->type());
 
         return nullptr;
@@ -243,6 +252,37 @@ private:
             return nullptr;
         }
         return m_alloc.allocate<ExprStmt>(expr);
+    }
+
+    Stmt* parse_declaration()
+    {
+        if (match(TokenType::VAR)) {
+            return parse_var_declaration();
+        }
+        return parse_statement();
+    }
+
+    Stmt* parse_var_declaration()
+    {
+        const Token* const identifier = consume(TokenType::IDENTIFIER, "Expected variable name.");
+        if (!identifier) {
+            return nullptr;
+        }
+
+        Expr* initializer = nullptr;
+        if (match(TokenType::EQUAL)) {
+            initializer = parse_expression();
+            if (!initializer) {
+                // TODO: report error here?
+                return nullptr;
+            }
+        }
+
+        if (!consume(TokenType::SEMICOLON, "Expected ';' after variable declaration.")) {
+            return nullptr;
+        }
+
+        return m_alloc.allocate<VarStmt>(identifier, initializer);
     }
 
     template <typename Fmt, typename... Args>

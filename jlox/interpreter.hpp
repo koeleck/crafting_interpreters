@@ -32,10 +32,12 @@ public:
     void visit(GroupingExpr& grouping_expr) override;
     void visit(LiteralExpr& literal_expr) override;
     void visit(UnaryExpr& unary_expr) override;
+    void visit(VarExpr& var_expr) override;
     void unkown_expr(Expr& expr) override;
 
     void visit(ExprStmt& expr_stmt) override;
     void visit(PrintStmt& expr_stmt) override;
+    void visit(VarStmt& var_stmt) override;
     void unkown_stmt(Stmt& stmt) override;
 
 private:

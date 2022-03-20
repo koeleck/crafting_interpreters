@@ -7,6 +7,7 @@ class Expr;
 class Stmt;
 struct ExprStmt;
 struct PrintStmt;
+struct VarStmt;
 
 class StmtVisitor
 {
@@ -15,6 +16,7 @@ public:
 
     virtual void visit(ExprStmt& expr_stmt) = 0;
     virtual void visit(PrintStmt& print_stmt) = 0;
+    virtual void visit(VarStmt& var_stmt) = 0;
     virtual void unkown_stmt(Stmt& stmt) = 0;
 
     void visit(Stmt& stmt) {
@@ -98,5 +100,19 @@ struct PrintStmt : StmtCRTC<PrintStmt>
         assert(expr);
     }
 
+    Expr* expr{nullptr};
+};
+
+struct VarStmt : StmtCRTC<VarStmt>
+{
+    constexpr
+    VarStmt(const Token* identifier, Expr* expr) noexcept
+      : identifier{identifier}
+      , expr{expr}
+    {
+        assert(identifier && identifier->type() == TokenType::IDENTIFIER);
+    }
+
+    const Token* identifier{nullptr};
     Expr* expr{nullptr};
 };

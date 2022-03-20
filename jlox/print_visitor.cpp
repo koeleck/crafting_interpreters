@@ -36,6 +36,13 @@ void PrintVisitor::visit(UnaryExpr& unary_expr)
     m_result.push_back(')');
 }
 
+void PrintVisitor::visit(VarExpr& var_expr)
+{
+    m_result.append("(var ");
+    m_result += var_expr.identifier->lexeme(m_source);
+    m_result.push_back(')');
+}
+
 void PrintVisitor::unkown_expr(Expr& /*expr*/)
 {
     m_result += "<unkown expr> ";

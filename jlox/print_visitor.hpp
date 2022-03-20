@@ -11,6 +11,7 @@ public:
     void visit(GroupingExpr& grouping_expr) override;
     void visit(LiteralExpr& literal_expr) override;
     void visit(UnaryExpr& unary_expr) override;
+    void visit(VarExpr& var_expr) override;
     void unkown_expr(Expr& /*expr*/) override;
     const std::string& get() const noexcept
     {

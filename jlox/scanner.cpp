@@ -397,6 +397,8 @@ ScannerResult scan_tokens(std::string_view source)
             }
             break;
 
+        // TODO: Handle 0xaf, 0b101, 0711, 1.500000E+07
+        case '0':
         case '1':
         case '2':
         case '3':

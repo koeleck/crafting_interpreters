@@ -276,6 +276,7 @@ void Interpreter::visit(LiteralExpr& literal_expr)
 
     case NUMBER:
         assert(lexeme.size() >= 1);
+        // TODO: Handle 0xafd, 0b111, 0777...
         m_stack.emplace_back(std::strtod(lexeme.data(), nullptr));
         break;
 

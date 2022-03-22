@@ -22,10 +22,17 @@ bool is_left_associative(TokenType /*type*/) noexcept
 constexpr
 int32_t get_binary_prio(TokenType type) noexcept
 {
+    // higher is more important
     switch (type) {
     using enum TokenType;
     case EQUAL:
         return 0;
+
+    case OR:
+        return 5;
+
+    case AND:
+        return 6;
 
     case EQUAL_EQUAL:
     case BANG_EQUAL:
@@ -192,6 +199,8 @@ private:
                 } else {
                     report_error(op, "Invalid assignment");
                 }
+            } else if (op->type() == TokenType::AND || op->type() == TokenType::OR) {
+                lhs = m_alloc.allocate<LogicalExpr>(lhs, op, rhs);
             } else {
                 lhs = m_alloc.allocate<BinaryExpr>(lhs, op, rhs);
             }

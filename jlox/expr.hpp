@@ -10,6 +10,7 @@ struct LiteralExpr;
 struct UnaryExpr;
 struct VarExpr;
 struct AssignExpr;
+struct LogicalExpr;
 
 class ExprVisitor
 {
@@ -22,6 +23,7 @@ public:
     virtual void visit(UnaryExpr& unary_expr) = 0;
     virtual void visit(VarExpr& var_expr) = 0;
     virtual void visit(AssignExpr& assign_expr) = 0;
+    virtual void visit(LogicalExpr& logical_expr) = 0;
     virtual void unkown_expr(Expr& expr) = 0;
 
     void visit(Expr& expr) {
@@ -213,4 +215,24 @@ struct AssignExpr : ExprCRTC<AssignExpr>
     const Token* identifier;
     Expr* value;
     static constexpr auto main_token = &AssignExpr::identifier;
+};
+
+struct LogicalExpr : ExprCRTC<LogicalExpr>
+{
+    constexpr
+    LogicalExpr(Expr* left, const Token* token, Expr* right) noexcept
+      : left{left}
+      , token{token}
+      , right{right}
+    {
+        assert(left && token && right);
+        assert(token->type() == TokenType::AND ||
+               token->type() == TokenType::OR);
+    }
+
+    Expr* left;
+    const Token* token;
+    Expr* right;
+
+    static constexpr auto main_token = &LogicalExpr::token;
 };

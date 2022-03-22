@@ -344,6 +344,22 @@ void Interpreter::visit(AssignExpr& assign_expr)
 
 }
 
+void Interpreter::visit(LogicalExpr& logical_expr)
+{
+    const bool left = is_truthy(evaluate_impl(*logical_expr.left));
+    const bool is_and = logical_expr.token->type() == TokenType::AND;
+    if (is_and && !left) {
+        m_stack.push_back(false);
+        return;
+    } else if (!is_and && left) {
+        m_stack.push_back(true);
+        return;
+    }
+
+    const bool right = is_truthy(evaluate_impl(*logical_expr.right));
+    m_stack.push_back(right);
+}
+
 void Interpreter::unkown_expr(Expr& expr)
 {
     static_cast<void>(expr);

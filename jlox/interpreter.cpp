@@ -330,16 +330,17 @@ void Interpreter::visit(VarExpr& var_expr)
 void Interpreter::visit(AssignExpr& assign_expr)
 {
     const std::string_view name = assign_expr.identifier->lexeme(m_scanner_result.source);
-    Value* const value = m_env.get(name);
-    if (!value) {
+
+    evaluate_impl_nopop(*assign_expr.value);
+
+    const bool result = m_env.assign(name, std::move(m_stack.back()));
+    m_stack.pop_back();
+
+    if (!result) {
         report_error(m_scanner_result, *assign_expr.identifier, "Undefined variable '{}'.", name);
         throw InterpreterError{};
     }
 
-    evaluate_impl_nopop(*assign_expr.value);
-
-    *value = std::move(m_stack.back());
-    m_stack.pop_back();
 }
 
 void Interpreter::unkown_expr(Expr& expr)
@@ -384,6 +385,15 @@ void Interpreter::visit(VarStmt& var_stmt)
     }
     m_env.define(var_stmt.identifier->lexeme(m_scanner_result.source),
                  std::move(val));
+}
+
+void Interpreter::visit(BlockStmt& block_stmt)
+{
+    NewScope new_scope(m_env);
+
+    for (Stmt* stmt : block_stmt.statements) {
+        stmt->accept(*this);
+    }
 }
 
 void Interpreter::unkown_stmt(Stmt&)

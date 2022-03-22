@@ -127,6 +127,11 @@ private:
         return nullptr;
     }
 
+    bool check(TokenType type) const noexcept
+    {
+        const Token* const nxt = peek();
+        return nxt->type() == type;
+    }
 
     template <typename Fmt, typename... Args>
     const Token* consume(TokenType expected, Fmt err_msg, Args&&... args)
@@ -255,6 +260,23 @@ private:
                 return nullptr;
             }
             return m_alloc.allocate<PrintStmt>(expr);
+        }
+        if (match(TokenType::LEFT_BRACE)) {
+            std::vector<Stmt*> statements;
+
+            while (!eof() && !check(TokenType::RIGHT_BRACE)) {
+                Stmt* const s = parse_declaration();
+                if (!s) {
+                    return nullptr;
+                }
+                statements.push_back(s);
+            }
+
+            if (!consume(TokenType::RIGHT_BRACE, "Expected '}' after block.")) {
+                return nullptr;
+            }
+
+            return m_alloc.allocate<BlockStmt>(std::move(statements));
         }
 
         Expr* const expr = parse_expression();

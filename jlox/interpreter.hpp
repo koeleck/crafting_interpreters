@@ -32,6 +32,7 @@ public:
     void visit(ExprStmt& expr_stmt) override;
     void visit(PrintStmt& expr_stmt) override;
     void visit(VarStmt& var_stmt) override;
+    void visit(BlockStmt& block_stmt) override;
     void unkown_stmt(Stmt& stmt) override;
 
 private:

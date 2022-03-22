@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <vector>
 #include "tokens.hpp"
 
 class Expr;
@@ -8,6 +9,7 @@ class Stmt;
 struct ExprStmt;
 struct PrintStmt;
 struct VarStmt;
+struct BlockStmt;
 
 class StmtVisitor
 {
@@ -17,6 +19,7 @@ public:
     virtual void visit(ExprStmt& expr_stmt) = 0;
     virtual void visit(PrintStmt& print_stmt) = 0;
     virtual void visit(VarStmt& var_stmt) = 0;
+    virtual void visit(BlockStmt& block_stmt) = 0;
     virtual void unkown_stmt(Stmt& stmt) = 0;
 
     void visit(Stmt& stmt) {
@@ -115,4 +118,13 @@ struct VarStmt : StmtCRTC<VarStmt>
 
     const Token* identifier{nullptr};
     Expr* initializer{nullptr};
+};
+
+struct BlockStmt : StmtCRTC<BlockStmt>
+{
+    BlockStmt(std::vector<Stmt*> statements) noexcept
+      : statements{statements}
+    {}
+
+    std::vector<Stmt*> statements;
 };

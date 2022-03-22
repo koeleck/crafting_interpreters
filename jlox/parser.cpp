@@ -251,6 +251,33 @@ private:
 
     Stmt* parse_statement()
     {
+        if (match(TokenType::IF)) {
+            if (!consume(TokenType::LEFT_PAREN, "Expect '(' after 'if'")) {
+                return nullptr;
+            }
+            Expr* const condition = parse_expression();
+            if (!condition) {
+                return nullptr;
+            }
+            if (!consume(TokenType::RIGHT_PAREN, "Expect ')' after if condition")) {
+                return nullptr;
+            }
+
+            Stmt* const then_branch = parse_statement();
+            if (!then_branch) {
+                return nullptr;
+            }
+            Stmt* else_branch = nullptr;
+            if (match(TokenType::ELSE)) {
+                else_branch = parse_statement();
+                if (!else_branch) {
+                    return nullptr;
+                }
+            }
+
+            return m_alloc.allocate<IfStmt>(condition, then_branch, else_branch);
+        }
+
         if (match(TokenType::PRINT)) {
             Expr* const expr = parse_expression();
             if (!expr) {
@@ -261,6 +288,7 @@ private:
             }
             return m_alloc.allocate<PrintStmt>(expr);
         }
+
         if (match(TokenType::LEFT_BRACE)) {
             std::vector<Stmt*> statements;
 

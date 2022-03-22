@@ -397,6 +397,15 @@ void Interpreter::visit(BlockStmt& block_stmt)
     }
 }
 
+void Interpreter::visit(IfStmt& if_stmt)
+{
+    if (is_truthy(evaluate_impl(*if_stmt.condition))) {
+        if_stmt.then_branch->accept(*this);
+    } else if (if_stmt.else_branch) {
+        if_stmt.else_branch->accept(*this);
+    }
+}
+
 void Interpreter::unkown_stmt(Stmt&)
 {
     std::abort();

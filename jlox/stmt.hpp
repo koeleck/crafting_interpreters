@@ -10,6 +10,7 @@ struct ExprStmt;
 struct PrintStmt;
 struct VarStmt;
 struct BlockStmt;
+struct IfStmt;
 
 class StmtVisitor
 {
@@ -20,6 +21,7 @@ public:
     virtual void visit(PrintStmt& print_stmt) = 0;
     virtual void visit(VarStmt& var_stmt) = 0;
     virtual void visit(BlockStmt& block_stmt) = 0;
+    virtual void visit(IfStmt& if_stmt) = 0;
     virtual void unkown_stmt(Stmt& stmt) = 0;
 
     void visit(Stmt& stmt) {
@@ -127,4 +129,25 @@ struct BlockStmt : StmtCRTC<BlockStmt>
     {}
 
     std::vector<Stmt*> statements;
+};
+
+struct IfStmt : StmtCRTC<IfStmt>
+{
+    constexpr
+    IfStmt(Expr* condition, Stmt* then_branch, Stmt* else_branch) noexcept
+      : condition{condition}
+      , then_branch{then_branch}
+      , else_branch{else_branch}
+    {
+        assert(condition && then_branch);
+    }
+
+    constexpr
+    IfStmt(Expr* condition, Stmt* then_branch) noexcept
+      : IfStmt{condition, then_branch, nullptr}
+    {}
+
+    Expr* condition;
+    Stmt* then_branch;
+    Stmt* else_branch;
 };

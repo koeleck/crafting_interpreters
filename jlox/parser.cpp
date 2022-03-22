@@ -338,6 +338,75 @@ private:
             return m_alloc.allocate<WhileStmt>(condition, body);
         }
 
+        if (match(TokenType::FOR)) {
+            if (!consume(TokenType::LEFT_PAREN, "Expect '(' after 'for'.")) {
+                return nullptr;
+            }
+
+            Stmt* initializer = nullptr;
+            if (match(TokenType::SEMICOLON)) {
+                // intentionally empty
+            } else if (match(TokenType::VAR)) {
+                initializer = parse_var_declaration();
+            } else {
+                Expr* const expr = parse_expression();
+                if (!expr) {
+                    return nullptr;
+                }
+                initializer = m_alloc.allocate<ExprStmt>(expr);
+            }
+
+            Expr* condition = nullptr;
+            if (!check(TokenType::SEMICOLON)) {
+                condition = parse_expression();
+                if (!condition) {
+                    return nullptr;
+                }
+            }
+            if (!consume(TokenType::SEMICOLON, "Expect ';' after loop condition.")) {
+                return nullptr;
+            }
+
+            Expr* increment = nullptr;
+            if (!check(TokenType::RIGHT_PAREN)) {
+                increment = parse_expression();
+                if (!increment) {
+                    return nullptr;
+                }
+            }
+            if (!consume(TokenType::RIGHT_PAREN, "Expect ')' after for clauses")) {
+                return nullptr;
+            }
+
+            Stmt* body = parse_statement();
+            if (!body) {
+                return nullptr;
+            }
+
+            if (increment) {
+                std::vector<Stmt*> statements{
+                    body,
+                    m_alloc.allocate<ExprStmt>(increment)
+                };
+                body = m_alloc.allocate<BlockStmt>(std::move(statements));
+            }
+
+            if (!condition) {
+                condition = m_alloc.allocate<LiteralExpr>(&TRUE_TOKEN);
+            }
+            body = m_alloc.allocate<WhileStmt>(condition, body);
+
+            if (initializer) {
+                std::vector<Stmt*> statements{
+                    initializer,
+                    body
+                };
+                body = m_alloc.allocate<BlockStmt>(std::move(statements));
+            }
+
+            return body;
+        }
+
         Expr* const expr = parse_expression();
         if (!expr) {
             return nullptr;

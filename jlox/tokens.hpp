@@ -81,3 +81,6 @@ private:
     TokenType m_type;
     // TODO: literal
 };
+
+inline constexpr Token TRUE_TOKEN{TokenType::TRUE, 0, 0};
+inline constexpr Token FALSE_TOKEN{TokenType::FALSE, 0, 0};

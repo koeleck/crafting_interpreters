@@ -422,6 +422,13 @@ void Interpreter::visit(IfStmt& if_stmt)
     }
 }
 
+void Interpreter::visit(WhileStmt& while_stmt)
+{
+    while (is_truthy(evaluate_impl(*while_stmt.condition))) {
+        while_stmt.body->accept(*this);
+    }
+}
+
 void Interpreter::unkown_stmt(Stmt&)
 {
     std::abort();

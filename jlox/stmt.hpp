@@ -11,6 +11,7 @@ struct PrintStmt;
 struct VarStmt;
 struct BlockStmt;
 struct IfStmt;
+struct WhileStmt;
 
 class StmtVisitor
 {
@@ -22,6 +23,7 @@ public:
     virtual void visit(VarStmt& var_stmt) = 0;
     virtual void visit(BlockStmt& block_stmt) = 0;
     virtual void visit(IfStmt& if_stmt) = 0;
+    virtual void visit(WhileStmt& while_stmt) = 0;
     virtual void unkown_stmt(Stmt& stmt) = 0;
 
     void visit(Stmt& stmt) {
@@ -151,3 +153,19 @@ struct IfStmt : StmtCRTC<IfStmt>
     Stmt* then_branch;
     Stmt* else_branch;
 };
+
+
+struct WhileStmt : StmtCRTC<WhileStmt>
+{
+    constexpr
+    WhileStmt(Expr* condition, Stmt* body) noexcept
+      : condition{condition}
+      , body{body}
+    {
+        assert(condition && body);
+    }
+
+    Expr* condition;
+    Stmt* body;
+};
+

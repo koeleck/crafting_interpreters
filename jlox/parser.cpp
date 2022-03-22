@@ -316,6 +316,28 @@ private:
             return m_alloc.allocate<BlockStmt>(std::move(statements));
         }
 
+        if (match(TokenType::WHILE)) {
+            if (!consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.")) {
+                return nullptr;
+            }
+
+            Expr* const condition = parse_expression();
+            if (!condition) {
+                return nullptr;
+            }
+
+            if (!consume(TokenType::RIGHT_PAREN, "Expect ')' after condition.")) {
+                return nullptr;
+            }
+
+            Stmt* const body = parse_statement();
+            if (!body) {
+                return nullptr;
+            }
+
+            return m_alloc.allocate<WhileStmt>(condition, body);
+        }
+
         Expr* const expr = parse_expression();
         if (!expr) {
             return nullptr;

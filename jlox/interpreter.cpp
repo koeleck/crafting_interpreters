@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <chrono>
 #include <stdexcept>
 
 #include "log.hpp"
@@ -140,6 +141,13 @@ std::string stringify(const Value& value)
     }
 }
 
+double clock_impl()
+{
+    const auto now = std::chrono::steady_clock::now();
+    const int64_t now_us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+    return static_cast<double>(now_us) / 1000000.0;
+}
+
 } // anonymous namespace
 
 
@@ -148,7 +156,9 @@ Interpreter::~Interpreter() = default;
 Interpreter::Interpreter(const ScannerResult& scanner_result, Environment& environment)
   : m_scanner_result{scanner_result}
   , m_env{environment}
-{}
+{
+    m_env.define("clock", Callable{&clock_impl});
+}
 
 bool Interpreter::execute(Stmt& stmt)
 {

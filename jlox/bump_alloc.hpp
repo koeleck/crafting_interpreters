@@ -45,6 +45,7 @@ public:
             } else {
                 AllocationHelper helper{*this, sizeof(VWD), alignof(VWD)};
                 VWD* result = new (helper.ptr()) VWD{&m_deleter, std::forward<Args>(args)...};
+                static_cast<void>(result);
                 return std::addressof(helper.release<VWD>()->value);
             }
         }

@@ -64,6 +64,22 @@ void PrintVisitor::visit(LogicalExpr& logical_expr)
     m_result.push_back(')');
 }
 
+void PrintVisitor::visit(CallExpr& call_expr)
+{
+    m_result.append("(CALL (");
+    call_expr.callee->accept(*this);
+    m_result.append(")(");
+    bool is_first = true;
+    for (const auto& e : call_expr.args) {
+        if (!is_first) {
+            m_result.append(", ");
+        }
+        is_first = false;
+        e->accept(*this);
+    }
+    m_result.append("))");
+}
+
 void PrintVisitor::unkown_expr(Expr& /*expr*/)
 {
     m_result += "<unkown expr> ";

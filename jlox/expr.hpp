@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <vector>
 #include "tokens.hpp"
 
 class Expr;
@@ -11,6 +12,7 @@ struct UnaryExpr;
 struct VarExpr;
 struct AssignExpr;
 struct LogicalExpr;
+struct CallExpr;
 
 class ExprVisitor
 {
@@ -24,6 +26,7 @@ public:
     virtual void visit(VarExpr& var_expr) = 0;
     virtual void visit(AssignExpr& assign_expr) = 0;
     virtual void visit(LogicalExpr& logical_expr) = 0;
+    virtual void visit(CallExpr& call_expr) = 0;
     virtual void unkown_expr(Expr& expr) = 0;
 
     void visit(Expr& expr) {
@@ -235,4 +238,22 @@ struct LogicalExpr : ExprCRTC<LogicalExpr>
     Expr* right;
 
     static constexpr auto main_token = &LogicalExpr::token;
+};
+
+
+struct CallExpr : ExprCRTC<CallExpr>
+{
+    CallExpr(Expr* callee, const Token* paren, const std::vector<Expr*>& args)
+      : callee{callee}
+      , paren{paren}
+      , args{std::move(args)}
+    {
+        assert(callee && paren);
+    }
+
+    Expr* callee;
+    const Token* paren;
+    std::vector<Expr*> args;
+
+    static constexpr auto main_token = &CallExpr::paren;
 };

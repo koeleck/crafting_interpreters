@@ -154,7 +154,41 @@ private:
 
     Expr* parse_expression()
     {
-        return parse_expression_rec(parse_primary(), 0);
+        Expr* const e = parse_primary();
+        if (!e) {
+            return nullptr;
+        }
+        if (match(TokenType::LEFT_PAREN)) {
+            return parse_call(e);
+        } else {
+            return parse_expression_rec(e, 0);
+        }
+    }
+
+    Expr* parse_call(Expr* callee)
+    {
+        if (!callee) {
+            return nullptr;
+        }
+        std::vector<Expr*> args;
+        if (!check(TokenType::RIGHT_PAREN)) {
+            do {
+                const Token* const lookahead = peek();
+                Expr* const arg = parse_expression();
+                if (!arg) {
+                    return nullptr;
+                }
+                args.push_back(arg);
+                if (args.size() >= 255) {
+                    report_error(lookahead, "Can't have more than 255 arguments.");
+                }
+            } while (match(TokenType::COMMA));
+        }
+        const Token* const paren = consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
+        if (!paren) {
+            return nullptr;
+        }
+        return m_alloc.allocate<CallExpr>(callee, paren, std::move(args));
     }
 
     Expr* parse_expression_rec(Expr* lhs, const int32_t min_priority = 0)

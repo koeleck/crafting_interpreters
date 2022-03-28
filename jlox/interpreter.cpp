@@ -360,6 +360,33 @@ void Interpreter::visit(LogicalExpr& logical_expr)
     m_stack.push_back(right);
 }
 
+void Interpreter::visit(CallExpr& call_expr)
+{
+    Value callee = evaluate_impl(*call_expr.callee);
+
+    Callable* const callable_callee = std::get_if<Callable>(&callee);
+    if (!callable_callee) {
+        report_error(m_scanner_result, *call_expr.callee->get_main_token(),
+                     "Value not callable");
+        throw InterpreterError{};
+    }
+    if (static_cast<int32_t>(call_expr.args.size()) != callable_callee->arity()) {
+        report_error(m_scanner_result, *call_expr.callee->get_main_token(),
+                     "Expected {} arguments but got {}.", callable_callee->arity(),
+                     call_expr.args.size());
+        throw InterpreterError{};
+    }
+
+
+    std::vector<Value> args;
+    args.reserve(call_expr.args.size());
+    for (Expr* arg : call_expr.args) {
+        args.push_back(evaluate_impl(*arg));
+    }
+
+    m_stack.push_back(callable_callee->call(*this, args));
+}
+
 void Interpreter::unkown_expr(Expr& expr)
 {
     static_cast<void>(expr);

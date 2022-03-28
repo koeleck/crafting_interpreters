@@ -28,6 +28,7 @@ public:
     void visit(VarExpr& var_expr) override;
     void visit(AssignExpr& assign_expr) override;
     void visit(LogicalExpr& logical_expr) override;
+    void visit(CallExpr& call_expr) override;
     void unkown_expr(Expr& expr) override;
 
     void visit(ExprStmt& expr_stmt) override;

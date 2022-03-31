@@ -37,6 +37,13 @@ public:
         };
     }
 
+    template <typename F>
+    explicit
+    Callable(F&& fun, int32_t arity)
+      : m_f{std::forward<F>(fun)}
+      , m_arity{arity}
+    {}
+
     int32_t arity() const noexcept
     {
         return m_arity;

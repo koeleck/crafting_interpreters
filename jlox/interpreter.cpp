@@ -466,6 +466,24 @@ void Interpreter::visit(WhileStmt& while_stmt)
     }
 }
 
+void Interpreter::visit(FunStmt& fun_stmt)
+{
+    const int32_t arity = static_cast<int32_t>(fun_stmt.params.size());
+    auto f = [params=std::move(fun_stmt.params), body=std::move(fun_stmt.body)] (Interpreter& interpreter, std::span<const Value> args) {
+        assert(params.size() == args.size());
+        NewScope new_scope(interpreter.m_env);
+        for (size_t i = 0, count = params.size(); i != count; ++i) {
+            interpreter.m_env.define(params[i]->lexeme(interpreter.m_scanner_result.source), args[i]);
+        }
+        for (Stmt* stmt : body) {
+            stmt->accept(interpreter);
+        }
+        return nil;
+    };
+
+    m_env.define(fun_stmt.name->lexeme(m_scanner_result.source), Callable{std::move(f), arity});
+}
+
 void Interpreter::unkown_stmt(Stmt&)
 {
     std::abort();

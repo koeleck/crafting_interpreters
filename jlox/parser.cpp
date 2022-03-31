@@ -14,6 +14,9 @@ namespace
 {
 
 constexpr
+int32_t MAX_N_PARAMS = 255;
+
+constexpr
 bool is_left_associative(TokenType /*type*/) noexcept
 {
     return true; // TODO for now everything is
@@ -179,8 +182,8 @@ private:
                     return nullptr;
                 }
                 args.push_back(arg);
-                if (args.size() >= 255) {
-                    report_error(lookahead, "Can't have more than 255 arguments.");
+                if (args.size() >= MAX_N_PARAMS) {
+                    report_error(lookahead, "Can't have more than {} arguments.", MAX_N_PARAMS);
                 }
             } while (match(TokenType::COMMA));
         }
@@ -456,6 +459,9 @@ private:
         if (match(TokenType::VAR)) {
             return parse_var_declaration();
         }
+        if (match(TokenType::FUN)) {
+            return parse_fun_declaration("function");
+        }
         return parse_statement();
     }
 
@@ -480,6 +486,52 @@ private:
         }
 
         return m_alloc.allocate<VarStmt>(identifier, initializer);
+    }
+
+    Stmt* parse_fun_declaration(std::string_view kind)
+    {
+        const Token* const name = consume(TokenType::IDENTIFIER, "Expected {} name.", kind);
+        if (!name) {
+            return nullptr;
+        }
+
+        std::vector<const Token*> params;
+        if (!consume(TokenType::LEFT_PAREN, "Expect '(' after {} name", kind)) {
+            return nullptr;
+        }
+        if (!check(TokenType::RIGHT_PAREN)) {
+            do {
+                if (params.size() >= MAX_N_PARAMS) {
+                    report_error(peek(), "Can't have more than {} parameters", MAX_N_PARAMS);
+                }
+                const Token* const next = consume(TokenType::IDENTIFIER, "Expect parameter name.");
+                if (!next) {
+                    return nullptr;
+                }
+                params.push_back(next);
+            } while (match(TokenType::COMMA));
+        }
+        if (!consume(TokenType::RIGHT_PAREN, "Expect ')' after parameters.")) {
+            return nullptr;
+        }
+
+        std::vector<Stmt*> body;
+        if (!consume(TokenType::LEFT_BRACE, "Expect '{' before {} body.", kind)) {
+            return nullptr;
+        }
+        while (!eof() && !check(TokenType::RIGHT_BRACE)) {
+            Stmt* const s = parse_declaration();
+            if (!s) {
+                return nullptr;
+            }
+            body.push_back(s);
+        }
+
+        if (!consume(TokenType::RIGHT_BRACE, "Expected '}' after {} body.", kind)) {
+            return nullptr;
+        }
+
+        return m_alloc.allocate<FunStmt>(name, std::move(params), std::move(body));
     }
 
     template <typename Fmt, typename... Args>

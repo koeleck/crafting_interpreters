@@ -37,6 +37,7 @@ public:
     void visit(BlockStmt& block_stmt) override;
     void visit(IfStmt& if_stmt) override;
     void visit(WhileStmt& while_stmt) override;
+    void visit(FunStmt& fun_stmt) override;
     void unkown_stmt(Stmt& stmt) override;
 
 private:

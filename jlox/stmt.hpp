@@ -9,6 +9,7 @@ class Stmt;
 struct ExprStmt;
 struct PrintStmt;
 struct VarStmt;
+struct FunStmt;
 struct BlockStmt;
 struct IfStmt;
 struct WhileStmt;
@@ -24,6 +25,7 @@ public:
     virtual void visit(BlockStmt& block_stmt) = 0;
     virtual void visit(IfStmt& if_stmt) = 0;
     virtual void visit(WhileStmt& while_stmt) = 0;
+    virtual void visit(FunStmt& fun_stmt) = 0;
     virtual void unkown_stmt(Stmt& stmt) = 0;
 
     void visit(Stmt& stmt) {
@@ -127,7 +129,7 @@ struct VarStmt : StmtCRTC<VarStmt>
 struct BlockStmt : StmtCRTC<BlockStmt>
 {
     BlockStmt(std::vector<Stmt*> statements) noexcept
-      : statements{statements}
+      : statements{std::move(statements)}
     {}
 
     std::vector<Stmt*> statements;
@@ -169,3 +171,18 @@ struct WhileStmt : StmtCRTC<WhileStmt>
     Stmt* body;
 };
 
+struct FunStmt : StmtCRTC<FunStmt>
+{
+    FunStmt(const Token* name, std::vector<const Token*> params,
+            std::vector<Stmt*> body) noexcept
+      : name{name}
+      , params{std::move(params)}
+      , body{std::move(body)}
+    {
+        assert(name);
+    }
+
+    const Token* name;
+    std::vector<const Token*> params;
+    std::vector<Stmt*> body;
+};

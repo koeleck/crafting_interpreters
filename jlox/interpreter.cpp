@@ -164,7 +164,10 @@ bool Interpreter::execute(Stmt& stmt)
 {
     assert(m_stack.empty() == true);
     try {
-        stmt.accept(*this);
+        const bool do_return = stmt.accept(*this);
+        if (do_return) {
+            m_stack.pop_back();
+        }
     } catch (const InterpreterError&) {
         assert(m_stack.empty() == true);
         return false;
@@ -404,15 +407,16 @@ void Interpreter::unkown_expr(Expr& expr)
 }
 
 
-void Interpreter::visit(ExprStmt& expr_stmt)
+bool Interpreter::visit(ExprStmt& expr_stmt)
 {
     assert(expr_stmt.expr);
     evaluate_impl_nopop(*expr_stmt.expr);
     m_stack.clear();
+    return false;
 }
 
 
-void Interpreter::visit(PrintStmt& print_stmt)
+bool Interpreter::visit(PrintStmt& print_stmt)
 {
     assert(print_stmt.expr);
     evaluate_impl_nopop(*print_stmt.expr);
@@ -428,10 +432,12 @@ void Interpreter::visit(PrintStmt& print_stmt)
     }
     fmt::print(" :: {}\n", *sptr);
     m_stack.pop_back();
+
+    return false;
 }
 
 
-void Interpreter::visit(VarStmt& var_stmt)
+bool Interpreter::visit(VarStmt& var_stmt)
 {
     Value val{nil};
     if (var_stmt.initializer) {
@@ -439,49 +445,82 @@ void Interpreter::visit(VarStmt& var_stmt)
     }
     m_env.define(var_stmt.identifier->lexeme(m_scanner_result.source),
                  std::move(val));
+
+    return false;
 }
 
-void Interpreter::visit(BlockStmt& block_stmt)
+bool Interpreter::visit(BlockStmt& block_stmt)
 {
     NewScope new_scope(m_env);
 
     for (Stmt* stmt : block_stmt.statements) {
-        stmt->accept(*this);
+        const bool do_return = stmt->accept(*this);
+        if (do_return) {
+            return true;
+        }
     }
+    return false;
 }
 
-void Interpreter::visit(IfStmt& if_stmt)
+bool Interpreter::visit(IfStmt& if_stmt)
 {
     if (is_truthy(evaluate_impl(*if_stmt.condition))) {
-        if_stmt.then_branch->accept(*this);
+        return if_stmt.then_branch->accept(*this);
     } else if (if_stmt.else_branch) {
-        if_stmt.else_branch->accept(*this);
+        return if_stmt.else_branch->accept(*this);
     }
+    return false;
 }
 
-void Interpreter::visit(WhileStmt& while_stmt)
+bool Interpreter::visit(WhileStmt& while_stmt)
 {
     while (is_truthy(evaluate_impl(*while_stmt.condition))) {
-        while_stmt.body->accept(*this);
+        const bool do_return = while_stmt.body->accept(*this);
+        if (do_return) {
+            return true;
+        }
     }
+    return false;
 }
 
-void Interpreter::visit(FunStmt& fun_stmt)
+bool Interpreter::visit(FunStmt& fun_stmt)
 {
     const int32_t arity = static_cast<int32_t>(fun_stmt.params.size());
-    auto f = [params=std::move(fun_stmt.params), body=std::move(fun_stmt.body)] (Interpreter& interpreter, std::span<const Value> args) {
+    auto f = [params=std::move(fun_stmt.params), body=std::move(fun_stmt.body)] (Interpreter& interpreter, std::span<const Value> args) -> Value {
         assert(params.size() == args.size());
         NewScope new_scope(interpreter.m_env);
         for (size_t i = 0, count = params.size(); i != count; ++i) {
             interpreter.m_env.define(params[i]->lexeme(interpreter.m_scanner_result.source), args[i]);
         }
+        bool has_return_value = false;
         for (Stmt* stmt : body) {
-            stmt->accept(interpreter);
+            if (stmt->accept(interpreter)) {
+                has_return_value = true;
+                break;
+            }
+
+        }
+        if (has_return_value) {
+            Value return_value = std::move(interpreter.m_stack.back());
+            interpreter.m_stack.pop_back();
+            return return_value;
         }
         return nil;
     };
 
     m_env.define(fun_stmt.name->lexeme(m_scanner_result.source), Callable{std::move(f), arity});
+
+    return false;
+}
+
+bool Interpreter::visit(ReturnStmt& return_stmt)
+{
+    if (return_stmt.expr) {
+        evaluate_impl_nopop(*return_stmt.expr);
+    } else {
+        m_stack.emplace_back(nil);
+    }
+    return true;
 }
 
 void Interpreter::unkown_stmt(Stmt&)

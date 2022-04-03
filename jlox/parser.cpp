@@ -157,41 +157,11 @@ private:
 
     Expr* parse_expression()
     {
-        Expr* const e = parse_primary();
+        Expr* e = parse_primary();
         if (!e) {
             return nullptr;
         }
-        if (match(TokenType::LEFT_PAREN)) {
-            return parse_call(e);
-        } else {
-            return parse_expression_rec(e, 0);
-        }
-    }
-
-    Expr* parse_call(Expr* callee)
-    {
-        if (!callee) {
-            return nullptr;
-        }
-        std::vector<Expr*> args;
-        if (!check(TokenType::RIGHT_PAREN)) {
-            do {
-                const Token* const lookahead = peek();
-                Expr* const arg = parse_expression();
-                if (!arg) {
-                    return nullptr;
-                }
-                args.push_back(arg);
-                if (args.size() >= MAX_N_PARAMS) {
-                    report_error(lookahead, "Can't have more than {} arguments.", MAX_N_PARAMS);
-                }
-            } while (match(TokenType::COMMA));
-        }
-        const Token* const paren = consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
-        if (!paren) {
-            return nullptr;
-        }
-        return m_alloc.allocate<CallExpr>(callee, paren, std::move(args));
+        return parse_expression_rec(e, 0);
     }
 
     Expr* parse_expression_rec(Expr* lhs, const int32_t min_priority = 0)
@@ -273,7 +243,17 @@ private:
             return m_alloc.allocate<LiteralExpr>(token);
 
         case IDENTIFIER:
-            return m_alloc.allocate<VarExpr>(token);
+            {
+                Expr* e = m_alloc.allocate<VarExpr>(token);
+                if (!e) {
+                    return nullptr;
+                }
+                if (match(TokenType::LEFT_PAREN)) {
+                    e = parse_call(e);
+                }
+                return e;
+            }
+
 
         case MINUS:
         case BANG:
@@ -292,6 +272,32 @@ private:
         report_error(token, "Unexpected token \"{}\".", token->type());
 
         return nullptr;
+    }
+
+    Expr* parse_call(Expr* callee)
+    {
+        if (!callee) {
+            return nullptr;
+        }
+        std::vector<Expr*> args;
+        if (!check(TokenType::RIGHT_PAREN)) {
+            do {
+                const Token* const lookahead = peek();
+                Expr* const arg = parse_expression();
+                if (!arg) {
+                    return nullptr;
+                }
+                args.push_back(arg);
+                if (args.size() >= MAX_N_PARAMS) {
+                    report_error(lookahead, "Can't have more than {} arguments.", MAX_N_PARAMS);
+                }
+            } while (match(TokenType::COMMA));
+        }
+        const Token* const paren = consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
+        if (!paren) {
+            return nullptr;
+        }
+        return m_alloc.allocate<CallExpr>(callee, paren, std::move(args));
     }
 
 
@@ -333,6 +339,20 @@ private:
                 return nullptr;
             }
             return m_alloc.allocate<PrintStmt>(expr);
+        }
+
+        if (const Token* const token  = match(TokenType::RETURN)) {
+            Expr* value{nullptr};
+            if (!check(TokenType::SEMICOLON)) {
+                value = parse_expression();
+                if (!value) {
+                    return nullptr;
+                }
+            }
+            if (!consume(TokenType::SEMICOLON, "Expect ';' after return value.")) {
+                return nullptr;
+            }
+            return m_alloc.allocate<ReturnStmt>(token, value);
         }
 
         if (match(TokenType::LEFT_BRACE)) {

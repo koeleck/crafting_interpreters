@@ -13,19 +13,21 @@ struct FunStmt;
 struct BlockStmt;
 struct IfStmt;
 struct WhileStmt;
+struct ReturnStmt;
 
 class StmtVisitor
 {
 public:
     virtual ~StmtVisitor() = default;
 
-    virtual void visit(ExprStmt& expr_stmt) = 0;
-    virtual void visit(PrintStmt& print_stmt) = 0;
-    virtual void visit(VarStmt& var_stmt) = 0;
-    virtual void visit(BlockStmt& block_stmt) = 0;
-    virtual void visit(IfStmt& if_stmt) = 0;
-    virtual void visit(WhileStmt& while_stmt) = 0;
-    virtual void visit(FunStmt& fun_stmt) = 0;
+    virtual bool visit(ExprStmt& expr_stmt) = 0;
+    virtual bool visit(PrintStmt& print_stmt) = 0;
+    virtual bool visit(VarStmt& var_stmt) = 0;
+    virtual bool visit(BlockStmt& block_stmt) = 0;
+    virtual bool visit(IfStmt& if_stmt) = 0;
+    virtual bool visit(WhileStmt& while_stmt) = 0;
+    virtual bool visit(FunStmt& fun_stmt) = 0;
+    virtual bool visit(ReturnStmt& fun_stmt) = 0;
     virtual void unkown_stmt(Stmt& stmt) = 0;
 
     void visit(Stmt& stmt) {
@@ -41,9 +43,10 @@ class Stmt
 public:
     Stmt() = delete;
 
-    void accept(StmtVisitor& visitor)
+    [[nodiscard]]
+    bool accept(StmtVisitor& visitor)
     {
-        m_accept(*this, visitor);
+        return m_accept(*this, visitor);
     }
 
     template <typename T>
@@ -58,14 +61,14 @@ protected:
     friend class StmtCRTC;
 
     constexpr
-    Stmt(void (*accept)(Stmt&, StmtVisitor&)) noexcept
+    Stmt(bool (*accept)(Stmt&, StmtVisitor&)) noexcept
       : m_accept{accept}
     {
         assert(m_accept);
     }
 
 private:
-    void (*m_accept)(Stmt&, StmtVisitor&);
+    bool (*m_accept)(Stmt&, StmtVisitor&);
 };
 
 template <typename T>
@@ -81,10 +84,10 @@ private:
     friend class Stmt;
 
     static
-    void accept_impl(Stmt& e, StmtVisitor& visitor)
+    bool accept_impl(Stmt& e, StmtVisitor& visitor)
     {
         static_assert(std::is_base_of_v<StmtCRTC<T>, T>);
-        visitor.visit(static_cast<T&>(e));
+        return visitor.visit(static_cast<T&>(e));
     }
 };
 
@@ -185,4 +188,18 @@ struct FunStmt : StmtCRTC<FunStmt>
     const Token* name;
     std::vector<const Token*> params;
     std::vector<Stmt*> body;
+};
+
+struct ReturnStmt : StmtCRTC<ReturnStmt>
+{
+    constexpr
+    ReturnStmt(const Token* token, Expr* expr) noexcept
+      : token{token}
+      , expr{expr}
+    {
+        assert(token);
+    }
+
+    const Token* token;
+    Expr* expr;
 };

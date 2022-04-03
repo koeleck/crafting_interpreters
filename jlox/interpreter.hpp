@@ -31,13 +31,14 @@ public:
     void visit(CallExpr& call_expr) override;
     void unkown_expr(Expr& expr) override;
 
-    void visit(ExprStmt& expr_stmt) override;
-    void visit(PrintStmt& expr_stmt) override;
-    void visit(VarStmt& var_stmt) override;
-    void visit(BlockStmt& block_stmt) override;
-    void visit(IfStmt& if_stmt) override;
-    void visit(WhileStmt& while_stmt) override;
-    void visit(FunStmt& fun_stmt) override;
+    bool visit(ExprStmt& expr_stmt) override;
+    bool visit(PrintStmt& expr_stmt) override;
+    bool visit(VarStmt& var_stmt) override;
+    bool visit(BlockStmt& block_stmt) override;
+    bool visit(IfStmt& if_stmt) override;
+    bool visit(WhileStmt& while_stmt) override;
+    bool visit(FunStmt& fun_stmt) override;
+    bool visit(ReturnStmt& return_stmt) override;
     void unkown_stmt(Stmt& stmt) override;
 
 private:

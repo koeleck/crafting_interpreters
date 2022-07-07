@@ -15,7 +15,7 @@ class Interpreter final : public ExprVisitor
                         , public StmtVisitor
 {
 public:
-    Interpreter(const ScannerResult& scanner_result, Environment& environment);
+    Interpreter(const ScannerResult& scanner_result, Globals& globals);
     ~Interpreter();
 
     [[nodiscard]]
@@ -55,5 +55,5 @@ private:
 
     std::vector<Value> m_stack;
     const ScannerResult& m_scanner_result;
-    Environment& m_env;
+    Globals& m_globals;
 };

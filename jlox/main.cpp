@@ -14,7 +14,7 @@
 #include "environment.hpp"
 
 static
-int run(std::string_view source, Environment& environment)
+int run(std::string_view source, Globals& globals)
 {
     const auto scan_result = scan_tokens(source);
     if (scan_result.num_errors != 0) {
@@ -27,7 +27,7 @@ int run(std::string_view source, Environment& environment)
         return 0; // TODO: Error?
     }
 
-    Interpreter interpreter{scan_result, environment};
+    Interpreter interpreter{scan_result, globals};
 
     for (Stmt* stmt : statements) {
         const std::optional<Value> result = interpreter.execute(*stmt);
@@ -63,18 +63,18 @@ int run_file(const char* path)
         input_file.read(&content.front(), len);
     }
 
-    Environment env{};
-    return run(content, env);
+    Globals globals{};
+    return run(content, globals);
 }
 
 
 static
 int run_prompt()
 {
-    Environment env{};
+    Globals globals{};
     std::cout << "> ";
     for (std::string line; std::getline(std::cin, line); ) {
-        const int result = run(line, env);
+        const int result = run(line, globals);
         if (result) {
             std::cerr << "Error [" << result << ']';
         }

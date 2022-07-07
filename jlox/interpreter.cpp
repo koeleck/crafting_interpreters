@@ -153,11 +153,11 @@ double clock_impl()
 
 Interpreter::~Interpreter() = default;
 
-Interpreter::Interpreter(const ScannerResult& scanner_result, Environment& environment)
+Interpreter::Interpreter(const ScannerResult& scanner_result, Globals& globals)
   : m_scanner_result{scanner_result}
-  , m_env{environment}
+  , m_globals{globals}
 {
-    m_env.define("clock", Callable{&clock_impl});
+    m_globals.environment()->define("clock", Callable{&clock_impl});
 }
 
 bool Interpreter::execute(Stmt& stmt)
@@ -333,7 +333,7 @@ void Interpreter::visit(UnaryExpr& unary_expr)
 
 void Interpreter::visit(VarExpr& var_expr)
 {
-    const Value* const value = m_env.get(var_expr.identifier->lexeme(m_scanner_result.source));
+    const Value* const value = m_globals.environment()->get(var_expr.identifier->lexeme(m_scanner_result.source));
     if (!value) {
         report_error(m_scanner_result, *var_expr.identifier, "Identifier not found");
         throw InterpreterError{};
@@ -347,7 +347,7 @@ void Interpreter::visit(AssignExpr& assign_expr)
 
     evaluate_impl_nopop(*assign_expr.value);
 
-    const bool result = m_env.assign(name, std::move(m_stack.back()));
+    const bool result = m_globals.environment()->assign(name, std::move(m_stack.back()));
     m_stack.pop_back();
 
     if (!result) {
@@ -443,15 +443,15 @@ bool Interpreter::visit(VarStmt& var_stmt)
     if (var_stmt.initializer) {
         val = evaluate_impl(*var_stmt.initializer);
     }
-    m_env.define(var_stmt.identifier->lexeme(m_scanner_result.source),
-                 std::move(val));
+    m_globals.environment()->define(var_stmt.identifier->lexeme(m_scanner_result.source),
+                                    std::move(val));
 
     return false;
 }
 
 bool Interpreter::visit(BlockStmt& block_stmt)
 {
-    NewScope new_scope(m_env);
+    NewScope new_scope(m_globals);
 
     for (Stmt* stmt : block_stmt.statements) {
         const bool do_return = stmt->accept(*this);
@@ -486,11 +486,16 @@ bool Interpreter::visit(WhileStmt& while_stmt)
 bool Interpreter::visit(FunStmt& fun_stmt)
 {
     const int32_t arity = static_cast<int32_t>(fun_stmt.params.size());
-    auto f = [params=std::move(fun_stmt.params), body=std::move(fun_stmt.body)] (Interpreter& interpreter, std::span<const Value> args) -> Value {
+    std::shared_ptr<Environment> env = m_globals.environment();
+    auto f = [params=std::move(fun_stmt.params), body=std::move(fun_stmt.body), closure=std::move(env)] (Interpreter& interpreter, std::span<const Value> args) -> Value {
         assert(params.size() == args.size());
-        NewScope new_scope(interpreter.m_env);
+
+        const AdjustedEnvironment adjusted_env{interpreter.m_globals, closure};
+
+        NewScope new_scope(interpreter.m_globals);
+        Environment* env = interpreter.m_globals.environment().get();
         for (size_t i = 0, count = params.size(); i != count; ++i) {
-            interpreter.m_env.define(params[i]->lexeme(interpreter.m_scanner_result.source), args[i]);
+            env->define(params[i]->lexeme(interpreter.m_scanner_result.source), args[i]);
         }
         bool has_return_value = false;
         for (Stmt* stmt : body) {
@@ -508,7 +513,7 @@ bool Interpreter::visit(FunStmt& fun_stmt)
         return nil;
     };
 
-    m_env.define(fun_stmt.name->lexeme(m_scanner_result.source), Callable{std::move(f), arity});
+    m_globals.environment()->define(fun_stmt.name->lexeme(m_scanner_result.source), Callable{std::move(f), arity});
 
     return false;
 }

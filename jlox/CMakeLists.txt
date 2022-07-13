@@ -19,6 +19,11 @@ target_sources(jlox_sources INTERFACE
     parser.hpp
     parser.cpp
 
+    detail/heap_ptr_base.hpp
+    detail/heap_ptr_base.cpp
+    garbage_collected_heap.hpp
+    garbage_collected_heap.cpp
+
     interpreter.hpp
     interpreter.cpp
 

@@ -3,19 +3,19 @@
 
 Environment::~Environment() = default;
 
-Environment::Environment(std::shared_ptr<Environment> parent)
+Environment::Environment(HeapPtr<Environment> parent)
   : m_env{}
   , m_parent{std::move(parent)}
 {}
 
 void Environment::define(std::string_view name, Value&& value)
 {
-    m_env.insert_or_assign(name, std::move(value));
+    m_env.insert_or_assign(std::string{name}, std::move(value));
 }
 
 void Environment::define(std::string_view name, const Value& value)
 {
-    m_env.insert_or_assign(name, std::move(value));
+    m_env.insert_or_assign(std::string{name}, std::move(value));
 }
 
 bool Environment::assign(std::string_view name, Value&& value)
@@ -64,12 +64,12 @@ const Value* Environment::get(std::string_view name) const noexcept
 Globals::~Globals() = default;
 
 Globals::Globals()
-  : m_env{std::make_shared<Environment>(nullptr)}
+  : m_env{Heap::allocate<Environment>(nullptr)}
 {}
 
 void Globals::open_scope()
 {
-    std::shared_ptr<Environment> new_env = std::make_shared<Environment>(m_env);
+    HeapPtr<Environment> new_env = Heap::allocate<Environment>(m_env);
     m_env = std::move(new_env);
 }
 

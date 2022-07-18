@@ -157,7 +157,7 @@ Interpreter::Interpreter(const ScannerResult& scanner_result, Globals& globals)
   : m_scanner_result{scanner_result}
   , m_globals{globals}
 {
-    m_globals.environment()->define("clock", Callable{&clock_impl});
+    m_globals.environment()->define("clock", Callable{&clock_impl, {}});
 }
 
 bool Interpreter::execute(Stmt& stmt)
@@ -486,8 +486,7 @@ bool Interpreter::visit(WhileStmt& while_stmt)
 bool Interpreter::visit(FunStmt& fun_stmt)
 {
     const int32_t arity = static_cast<int32_t>(fun_stmt.params.size());
-    std::shared_ptr<Environment> env = m_globals.environment();
-    auto f = [params=std::move(fun_stmt.params), body=std::move(fun_stmt.body), closure=std::move(env)] (Interpreter& interpreter, std::span<const Value> args) -> Value {
+    auto f = [params=std::move(fun_stmt.params), body=std::move(fun_stmt.body)] (Interpreter& interpreter, const HeapPtr<Environment>& closure, std::span<const Value> args) -> Value {
         assert(params.size() == args.size());
 
         const AdjustedEnvironment adjusted_env{interpreter.m_globals, closure};
@@ -513,7 +512,8 @@ bool Interpreter::visit(FunStmt& fun_stmt)
         return nil;
     };
 
-    m_globals.environment()->define(fun_stmt.name->lexeme(m_scanner_result.source), Callable{std::move(f), arity});
+    HeapPtr<Environment> env = m_globals.environment();
+    m_globals.environment()->define(fun_stmt.name->lexeme(m_scanner_result.source), Callable{std::move(f), arity, std::move(env)});
 
     return false;
 }

@@ -6,9 +6,13 @@
 #include <string>
 #include <functional>
 
-struct Expr;
+#include "garbage_collected_heap.hpp"
+
+class Expr;
 class Interpreter;
 class Callable;
+class Environment;
+
 
 struct Nil
 {
@@ -28,19 +32,21 @@ public:
 
     template <typename R, typename... Args>
     explicit constexpr
-    Callable(R (*fptr)(Args...))
+    Callable(R (*fptr)(Args...), HeapPtr<Environment> environment)
       : Callable{}
     {
+        m_env = std::move(environment);
         m_arity = sizeof...(Args);
-        m_f = [fptr=fptr] (Interpreter&, std::span<const Value> args) -> Value {
+        m_f = [fptr=fptr] (Interpreter&, const HeapPtr<Environment>&, std::span<const Value> args) -> Value {
             return invoke(fptr, args, std::make_index_sequence<sizeof...(Args)>{});
         };
     }
 
     template <typename F>
     explicit
-    Callable(F&& fun, int32_t arity)
-      : m_f{std::forward<F>(fun)}
+    Callable(F&& fun, int32_t arity, HeapPtr<Environment> environment)
+      : m_env{std::move(environment)}
+      , m_f{std::forward<F>(fun)}
       , m_arity{arity}
     {}
 
@@ -51,7 +57,7 @@ public:
 
     Value call(Interpreter& interpreter, std::span<const Value> args)
     {
-        return m_f(interpreter, args);
+        return m_f(interpreter, m_env, args);
     }
 
 private:
@@ -65,6 +71,7 @@ private:
         return (*fptr)(std::get<std::remove_cvref_t<Args>>(args[Indices])...);
     }
 
-    std::function<Value(Interpreter&, std::span<const Value>)> m_f;
+    HeapPtr<Environment> m_env;
+    std::function<Value(Interpreter&, const HeapPtr<Environment>&, std::span<const Value>)> m_f;
     int32_t m_arity{-1};
 };

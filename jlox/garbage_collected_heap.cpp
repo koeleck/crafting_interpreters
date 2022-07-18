@@ -3,7 +3,14 @@
 #include <sys/mman.h>
 #include <cstdlib>
 #include <algorithm>
+
 #include <cstdio>
+
+#if 0
+#define DBG(...) std::printf(__VA_ARGS__)
+#else
+#define DBG(...) static_cast<void>(0)
+#endif
 
 static
 constexpr std::size_t PAGE_SIZE = 4 * 1024;
@@ -61,7 +68,7 @@ void GarbageCollectedHeap::run_gc() noexcept
                 this_block.alive = true;
             } else {
                 const std::size_t offset = ptr - m_memory;
-                const auto src = std::lower_bound(
+                auto src = std::lower_bound(
                         m_allocated.begin(),
                         m_allocated.end(),
                         offset,
@@ -69,7 +76,11 @@ void GarbageCollectedHeap::run_gc() noexcept
                         {
                             return block.offset < offset;
                         });
-                assert(src != m_allocated.end());
+                if (src == m_allocated.end() || offset < src->offset) {
+                    assert(src != m_allocated.begin());
+                    --src;
+                }
+                assert(src->offset <= offset && offset < (src->offset + src->size));
                 src->references.push_back(&this_block);
             }
             ref = ref->next();
@@ -94,6 +105,7 @@ void GarbageCollectedHeap::run_gc() noexcept
                 if (block.dtor)
                     block.dtor(m_memory + block.offset);
                 freed_something = true;
+                DBG("Destroyed block. offset=%lu, size=%lu\n", block.offset, block.size);
                 m_free.push_back(FreeBlock{block.offset, block.size});
                 m_allocated.erase(m_allocated.begin() + n);
             }
@@ -171,11 +183,14 @@ GarbageCollectedHeap::allocate_raw(const std::size_t size)
         m_free.erase(free_block);
     }
 
+    DBG("Allocated raw block. offset=%lu, size=%lu\n", new_block_on_the_block->offset, new_block_on_the_block->size);
+
     return new_block_on_the_block;
 }
 
 void GarbageCollectedHeap::undo_raw_allocation(std::vector<GarbageCollectedHeap::AllocatedBlock>::iterator undo_alloc) noexcept
 {
+    DBG("Deallocated raw block. offset=%lu, size=%lu\n", undo_alloc->offset, undo_alloc->size);
     // A previous raw allocation could either have split the original free block or completely removed it
     const std::size_t free_block_offset = undo_alloc->offset + undo_alloc->size;
     const auto free_block = std::lower_bound(
@@ -197,6 +212,18 @@ void GarbageCollectedHeap::undo_raw_allocation(std::vector<GarbageCollectedHeap:
     m_allocated.erase(undo_alloc);
 }
 
+HeapPtr<void> GarbageCollectedHeap::allocate_bytes(const std::size_t n)
+{
+    const std::size_t nbytes = (n + (ALLOC_GRANULARITY - 1)) & -ALLOC_GRANULARITY;
+
+    auto it = allocate_raw(nbytes);
+
+    void* const ptr = m_memory + it->offset;
+
+    HeapPtr<void> heap_ptr;
+    heap_ptr.link(it->referenced_by, ptr);
+    return heap_ptr;
+}
 
 std::size_t GarbageCollectedHeap::num_free_bytes() const noexcept
 {
@@ -207,13 +234,55 @@ std::size_t GarbageCollectedHeap::num_free_bytes() const noexcept
     return result;
 }
 
+GarbageCollectedHeap& GarbageCollectedHeap::get_heap() noexcept
+{
+    static GarbageCollectedHeap heap{2 * 1024};
+    return heap;
+}
+
+HeapPtr<void> GarbageCollectedHeap::reference_to_allocation_impl(const void* const ptr) noexcept
+{
+    if (!ptr) {
+        return {};
+    }
+    if (m_allocated.empty()) {
+        return {};
+    }
+
+    const char* const cptr = static_cast<const char*>(ptr);
+    if (cptr < m_memory || (m_memory + m_capacity) <= cptr) {
+        return {};
+    }
+
+    const std::size_t offset = cptr - m_memory;
+    auto alloc = std::lower_bound(
+            m_allocated.begin(),
+            m_allocated.end(),
+            offset,
+            [] (const AllocatedBlock& block, std::size_t offset)
+            {
+                return block.offset < offset;
+            });
+
+    if (alloc == m_allocated.end() || offset < alloc->offset) {
+        --alloc;
+    }
+    if (alloc->offset <= offset && offset < (alloc->offset + alloc->size)) {
+        HeapPtr<void> result;
+        result.link(alloc->referenced_by, const_cast<void*>(ptr));
+        return result;
+    }
+    return {};
+}
+
 ///////////////////////////////////////////////////////////////
 #include <doctest/doctest.h>
 #include <stdexcept>
+#include <unordered_map>
 
 TEST_CASE("GarbageCollectedHeap")
 {
-    GarbageCollectedHeap heap{2 * 1024 * 1024};
+    GarbageCollectedHeap& heap = GarbageCollectedHeap::get_heap();
     REQUIRE(heap.num_free_bytes() == heap.capacity());
 
     SUBCASE("External references only") {
@@ -265,6 +334,12 @@ TEST_CASE("GarbageCollectedHeap")
 
     SUBCASE("Internal and external references") {
         struct Chain {
+            constexpr
+            Chain(HeapPtr<Chain>&& next, int value) noexcept
+              : next{std::move(next)}
+              , value{value}
+            {}
+
             HeapPtr<Chain> next;
             int value;
         };
@@ -319,5 +394,31 @@ TEST_CASE("GarbageCollectedHeap")
         ptrs.clear();
         heap.run_gc();
         REQUIRE(heap.num_free_bytes() == heap.capacity());
+    }
+
+    SUBCASE("unordered_map") {
+        using Key = int32_t;
+        using Value = int32_t;
+        using Hash = std::hash<Key>;
+        using KeyEqual = std::equal_to<Key>;
+        using Alloc = GarbageCollectedAllocator<std::pair<const Key, Value>>;
+        using Map = std::unordered_map<Key, Value,
+                                       Hash,
+                                       KeyEqual,
+                                       Alloc>;
+
+        {
+            Map map{};
+
+            map[1] = 2;
+            map[2] = 3;
+            map[3] = 4;
+
+            REQUIRE(heap.num_free_bytes() < heap.capacity());
+        }
+
+        heap.run_gc();
+        REQUIRE(heap.num_free_bytes() == heap.capacity());
+
     }
 }

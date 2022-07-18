@@ -3,15 +3,29 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <absl/container/flat_hash_map.h>
+#include <unordered_map>
+#include <absl/hash/hash.h>
 
 #include "value.hpp"
+#include "garbage_collected_heap.hpp"
 
+struct StringHash {
+    using is_transparent = void;
+    [[nodiscard]] size_t operator()(const char *txt) const {
+        return std::hash<std::string_view>{}(txt);
+    }
+    [[nodiscard]] size_t operator()(std::string_view txt) const {
+        return std::hash<std::string_view>{}(txt);
+    }
+    [[nodiscard]] size_t operator()(const std::string &txt) const {
+        return std::hash<std::string>{}(txt);
+    }
+};
 
-class Environment : public std::enable_shared_from_this<Environment>
+class Environment
 {
 public:
-    Environment(std::shared_ptr<Environment> parent);
+    Environment(HeapPtr<Environment> parent);
     ~Environment();
 
     void define(std::string_view name, Value&& value);
@@ -22,16 +36,25 @@ public:
 
     const Value* get(std::string_view name) const noexcept;
 
-    const std::shared_ptr<Environment> parent() const noexcept
+    const HeapPtr<Environment>& parent() const noexcept
     {
         return m_parent;
     }
 
 private:
-    using Map = absl::flat_hash_map<std::string, Value>;
+    using Map = std::unordered_map<std::string, Value,
+            StringHash,
+            std::equal_to<>,
+            GarbageCollectedAllocator<std::pair<const std::string, Value>>>;
+    /*
+    using Map = absl::flat_hash_map<std::string, Value,
+          absl::container_internal::hash_default_hash<std::string>,
+          absl::container_internal::hash_default_eq<std::string>,
+          GarbageCollectedAllocator<std::pair<const std::string, Value>>>;
+    */
 
     Map m_env;
-    std::shared_ptr<Environment> m_parent;
+    HeapPtr<Environment> m_parent;
 };
 
 class Globals
@@ -43,20 +66,20 @@ public:
     void open_scope();
     void close_scope();
 
-    const std::shared_ptr<Environment>& environment() const noexcept
+    const HeapPtr<Environment>& environment() const noexcept
     {
         return m_env;
     }
 
-    std::shared_ptr<Environment> exchange(std::shared_ptr<Environment> new_env)
+    HeapPtr<Environment> exchange(HeapPtr<Environment> new_env)
     {
-        std::shared_ptr<Environment> prev{std::move(m_env)};
+        HeapPtr<Environment> prev{std::move(m_env)};
         m_env = std::move(new_env);
         return prev;
     }
 
 private:
-    std::shared_ptr<Environment> m_env;
+    HeapPtr<Environment> m_env;
 };
 
 
@@ -86,7 +109,7 @@ private:
 class AdjustedEnvironment
 {
 public:
-    AdjustedEnvironment(Globals& globals, std::shared_ptr<Environment> new_env)
+    AdjustedEnvironment(Globals& globals, HeapPtr<Environment> new_env)
       : m_globals{globals}
       , m_prev{m_globals.exchange(std::move(new_env))}
     {}
@@ -102,5 +125,5 @@ public:
     AdjustedEnvironment& operator=(AdjustedEnvironment&&) = delete;
 private:
     Globals& m_globals;
-    std::shared_ptr<Environment> m_prev;
+    HeapPtr<Environment> m_prev;
 };

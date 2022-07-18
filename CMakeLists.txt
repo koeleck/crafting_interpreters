@@ -6,9 +6,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(WITH_ASAN "Use address sanitizer" OFF)
-option(WITH_LSAN "Use lean sanitizer" OFF)
-option(WITH_UBSAN "use undefined behavior sanitizer" OFF)
+option(WITH_ASAN "Use address sanitizer" ON)
+option(WITH_LSAN "Use lean sanitizer" ON)
+option(WITH_UBSAN "use undefined behavior sanitizer" ON)
 
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -g")
 if(WITH_ASAN)
